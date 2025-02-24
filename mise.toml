@@ -31,7 +31,7 @@ run = "uv run ruff check --fix ."
 
 [tasks.test]
 description = "Run tests"
-run = "uv run pytest"
+run = "uv run pytest tests/"
 depends = ["format", "lint", "fix"]
 
 [tasks.test-integration]

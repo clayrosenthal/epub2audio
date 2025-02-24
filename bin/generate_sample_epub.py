@@ -11,6 +11,7 @@
 """Sample EPUB file for testing."""
 
 import os
+
 from ebooklib import epub
 
 # Create a new EPUB book

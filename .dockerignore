@@ -63,4 +63,6 @@ docs/
 LICENSE
 
 # Misc
-.DS_Store 
+.DS_Store
+mise.local.toml
+mise.toml
