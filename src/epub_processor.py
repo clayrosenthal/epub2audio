@@ -29,6 +29,14 @@ class BookMetadata:
     publisher: Optional[str] = None
     description: Optional[str] = None
 
+def get_book_length(chapters: List[Chapter]) -> float:
+    """Get the length of an EPUB book.
+    
+    Args:
+        chapters: List of chapters
+    """
+    return sum(len(chapter.content) for chapter in chapters)
+
 class EPUBProcessor:
     """Class for processing EPUB files and extracting content."""
     

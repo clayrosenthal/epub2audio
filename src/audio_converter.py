@@ -2,18 +2,15 @@
 
 import os
 from loguru import logger
-from typing import List, Generator
-import soundfile as sf
+from typing import List, Generator, Union
 from soundfile import SoundFile
 import numpy as np
-from kokoro import KPipeline, KPipelineResult # Maybe I'll implement TextToSpeech, Voice
-from dataclasses import dataclass
+from kokoro import KPipeline # Maybe I'll implement TextToSpeech, Voice
 
-from .helpers import ConversionError, logger, get_tempfile
+from .helpers import ConversionError, logger, TempDirManager
 from .config import (
     ErrorCodes,
     SAMPLE_RATE,
-    TEMP_DIR,
 )
 from .voices import Voice
 
@@ -22,8 +19,10 @@ class AudioConverter:
     
     def __init__(
         self,
+        epub_path: str,
         voice: str | Voice = Voice.AF_HEART,
         speech_rate: float = 1.0,
+        cache: bool = True,
     ):
         """Initialize the audio converter.
         
@@ -35,19 +34,18 @@ class AudioConverter:
             ConversionError: If the voice is invalid or TTS initialization fails
         """
         try:
-            if isinstance(voice, Voice):
-                self.voice = voice
-            else:
-                self.voice = self._get_voice(voice)
-            self.tts = KPipeline(lang_code=self.voice.lang_code)
+            self.voice = self._get_voice(voice)
+            self.tts = KPipeline(lang_code=self.voice.lang_code, repo_id='hexgrad/Kokoro-82M')
             self.speech_rate = speech_rate
+            self.temp_dir_manager = TempDirManager(epub_path)
+            self.cache = cache
         except Exception as e:
             raise ConversionError(
-                f"Failed to initialize TTS: {str(e)}",
+                f"Failed to initialize TextToSpeech: {str(e)}",
                 ErrorCodes.INVALID_VOICE
             )
     
-    def _get_voice(self, voice_name: str) -> Voice:
+    def _get_voice(self, voice: Union[str, Voice]) -> Voice:
         """Get a voice by name.
         
         Args:
@@ -59,15 +57,17 @@ class AudioConverter:
         Raises:
             ConversionError: If the voice is invalid
         """
+        if isinstance(voice, Voice):
+            return voice
         try:
-            return Voice.get_by_name(voice_name)
+            return Voice.get_by_name(voice)
         except Exception as e:
             raise ConversionError(
-                f"Invalid voice '{voice_name}'. Available voices: {', '.join(Voice.list_voices())}",
+                f"Invalid voice '{voice}'. Available voices: {', '.join([v.name for v in Voice.list_voices()])}",
                 ErrorCodes.INVALID_VOICE
             )
         
-    def _audio_data_generator(self, text: str) -> Generator[KPipelineResult, None, None]:
+    def _audio_data_generator(self, text: str) -> Generator[KPipeline.Result, None, None]:
         """Generate audio data from text.
         
         Args:
@@ -98,24 +98,30 @@ class AudioConverter:
         """
         try:
             # Create a temporary file
-            temp_file = get_tempfile()
+            temp_file = self.temp_dir_manager.get_tempfile()
+            
+            # If the file exists and caching is enabled, return the cached file
+            if os.path.exists(temp_file) and self.cache:
+                return SoundFile(temp_file)
+            
+            if os.path.exists(f"{temp_file}.generating"):
+                os.remove(f"{temp_file}.generating")
 
-            audio_data = SoundFile(temp_file, mode='w', samplerate=SAMPLE_RATE, channels=1)
+            audio_data = SoundFile(f"{temp_file}.generating", mode='w', samplerate=SAMPLE_RATE, channels=1, format='OGG', subtype='VORBIS')
             # Generate speech
             for result in self._audio_data_generator(text):
                 phonemes = result.phonemes
                 audio = result.audio
                 logger.debug(phonemes)
-                # logger.debug(result.phonemes)
                 if audio is None:
                     continue
                 audio_bytes = (audio.numpy() * 32767).astype(np.int16)
-                # .tobytes()
-                # wav_file.writeframes(audio_bytes)
                 audio_data.write(audio_bytes)
             
+            # Close the audio data, and rename the file to the final file
             audio_data.close()
-            return audio_data
+            os.rename(f"{temp_file}.generating", temp_file)
+            return SoundFile(temp_file)
         
         except Exception as e:
             raise ConversionError(
@@ -135,37 +141,7 @@ class AudioConverter:
         announcement_text = f"Chapter: {chapter_title}"
         return self.convert_text(announcement_text)
     
-    def save_audio_segment(
-        self,
-        segment: SoundFile,
-        output_path: str,
-        temp: bool = False
-    ) -> None:
-        """Save an audio segment to a file.
-        
-        Args:
-            segment: Audio segment to save
-            output_path: Path to save to
-            temp: Whether this is a temporary file
-        """
-        try:
-            directory = TEMP_DIR if temp else os.path.dirname(output_path)
-            os.makedirs(directory, exist_ok=True)
-            
-            segment.write(
-                output_path,
-                format='OGG',
-                subtype='VORBIS'
-            )
-            segment.close()
-        except Exception as e:
-            raise ConversionError(
-                f"Failed to save audio file: {str(e)}",
-                ErrorCodes.FILESYSTEM_ERROR
-            )
-    
-    @staticmethod
-    def concatenate_segments(segments: List[SoundFile]) -> SoundFile:
+    def concatenate_segments(self, segments: List[SoundFile]) -> SoundFile:
         """Concatenate multiple audio segments.
         
         Args:
@@ -183,7 +159,7 @@ class AudioConverter:
             raise ValueError("All audio segments must have the same sample rate")
         
         # Concatenate the audio data
-        temp_file = get_tempfile()
+        temp_file = self.temp_dir_manager.get_tempfile()
         concatenated_data = SoundFile(temp_file, mode='w', samplerate=sample_rate, channels=1)
         for segment in segments:
             with SoundFile(segment.name, mode='r') as sf:

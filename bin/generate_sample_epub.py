@@ -10,6 +10,7 @@
 # MISE outputs=["tests/data/sample.epub"]
 """Sample EPUB file for testing."""
 
+import os
 from ebooklib import epub
 
 # Create a new EPUB book
@@ -56,6 +57,9 @@ book.add_item(epub.EpubNav())
 
 # Create spine
 book.spine = ["nav", c1, c2]
+
+if not os.path.exists("tests/data"):
+    os.makedirs("tests/data")
 
 # Write the EPUB file
 epub.write_epub("tests/data/sample.epub", book)

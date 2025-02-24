@@ -1,16 +1,20 @@
 """Utility functions and error handling for the EPUB to Audiobook converter."""
 
+import hashlib
 import os
 import shutil
 import sys
 from tempfile import TemporaryDirectory,NamedTemporaryFile
+from typing import Optional, Dict, Any, ClassVar
 
-from loguru import logger
-from typing import Optional, Dict, Any
 from dataclasses import dataclass
 from tqdm import tqdm
 from soundfile import SoundFile
-from .config import ErrorCodes, WarningTypes, TEMP_DIR
+
+from .config import ErrorCodes, TEMP_DIR
+
+
+from loguru import logger
 
 # Set up logging
 logger.add(sys.stdout, level="INFO")
@@ -36,6 +40,71 @@ class AudioHandlerError(Exception):
         self.message = message
         self.error_code = error_code
         super().__init__(self.message)
+
+class TempDirManager:
+    """Manager for temporary directories based on EPUB file hashes."""
+    
+    _instances: ClassVar[Dict[str, str]] = {}
+    _temp_dirs: ClassVar[Dict[str, TemporaryDirectory]] = {}
+    
+    def __init__(self, epub_path: str):
+        """Initialize the temp directory manager for an EPUB file.
+        
+        Args:
+            epub_path: Path to the EPUB file
+        """
+        with open(epub_path, 'rb') as f:
+            self.epub_hash = hashlib.file_digest(f, 'sha256').hexdigest()
+        self.epub_path = epub_path
+        self._ensure_temp_dir()
+    
+    def _ensure_temp_dir(self) -> None:
+        """Ensure the temporary directory exists."""
+        if self.epub_hash not in self._instances:
+            temp_dir = TemporaryDirectory(prefix=f"{TEMP_DIR}_{self.epub_hash}", delete=False)
+            self._instances[self.epub_hash] = temp_dir.name
+            self._temp_dirs[self.epub_hash] = temp_dir
+    
+    @property
+    def tempdir(self) -> str:
+        """Get the path to the temporary directory.
+        
+        Returns:
+            str: Path to the temporary directory
+        """
+        return self._instances[self.epub_hash]
+    
+    def get_tempfile(self, suffix: str = '.ogg') -> str:
+        """Get a temporary file name.
+        
+        Args:
+            suffix: File suffix
+            
+        Returns:
+            str: Temporary file name
+        """
+        return NamedTemporaryFile(delete=False, suffix=suffix, dir=self.tempdir).name
+    
+    def cleanup(self) -> None:
+        """Clean up the temporary directory."""
+        if self.epub_hash in self._temp_dirs:
+            try:
+                self._temp_dirs[self.epub_hash].cleanup()
+                del self._temp_dirs[self.epub_hash]
+                del self._instances[self.epub_hash]
+            except Exception as e:
+                logger.warning(f"Failed to clean up temporary directory for {self.epub_path}: {e}")
+    
+    @classmethod
+    def cleanup_all(cls) -> None:
+        """Clean up all temporary directories."""
+        for temp_dir in list(cls._temp_dirs.values()):
+            try:
+                temp_dir.cleanup()
+            except Exception as e:
+                logger.warning(f"Failed to clean up temporary directory: {e}")
+        cls._temp_dirs.clear()
+        cls._instances.clear()
 
 def check_disk_space(path: str, required_bytes: int) -> bool:
     """Check if there's enough disk space available.
@@ -147,19 +216,3 @@ def get_duration(audio: SoundFile) -> float:
         audio: Audio file object
     """
     return audio.frames / (audio.samplerate * audio.channels * 1.0)
-
-def get_tempdir() -> str:
-    """Get the temporary directory.
-    
-    Returns:
-        str: Temporary directory
-    """
-    return TemporaryDirectory(prefix=TEMP_DIR, delete=False).name
-
-def get_tempfile(suffix: str = '.ogg') -> str:
-    """Get a temporary file name.
-    
-    Returns:
-        str: Temporary file name
-    """
-    return NamedTemporaryFile(delete=False, suffix=suffix, dir=get_tempdir()).name

@@ -3,10 +3,10 @@
 import os
 import click
 import shutil
-from typing import Optional
+from typing import Optional, Union
 from tqdm import tqdm
 
-from .epub_processor import EPUBProcessor
+from .epub_processor import EPUBProcessor, get_book_length
 from .audio_converter import AudioConverter
 from .audio_handler import AudioHandler
 from .helpers import (
@@ -30,22 +30,22 @@ from .config import (
 def process_epub(
     epub_path: str,
     output_dir: str,
-    voice_name: str,
+    voice: Union[str, Voice],
     speech_rate: float,
     bitrate: str,
     quiet: bool,
-    debug: bool,
+    cache: bool,
 ) -> None:
     """Process an EPUB file and convert it to an audiobook.
     
     Args:
         epub_path: Path to the EPUB file
         output_dir: Output directory
-        voice_name: Name of the voice to use
+        voice: Name of the voice to use
         speech_rate: Speech rate multiplier
         bitrate: Output audio bitrate
         quiet: Whether to suppress progress reporting
-        debug: Whether to enable debug mode
+        cache: Whether to enable caching of audio segments
     """
     # Create output directory
     ensure_dir_exists(output_dir)
@@ -58,13 +58,16 @@ def process_epub(
     epub = EPUBProcessor(epub_path)
     metadata = epub.extract_metadata()
     chapters = epub.extract_chapters()
+    logger.debug(f"Number of chapters: {len(chapters)}")
+    logger.debug(f"Chapter titles: {[chapter.title for chapter in chapters]}")
+    logger.debug(f"Book length: {get_book_length(chapters)}")
     
     # Estimate required disk space (rough estimate: 1MB per minute of audio)
-    estimated_space = sum(len(chapter.content) for chapter in chapters) * 100  # Very rough estimate
+    estimated_space = get_book_length(chapters) * 100  # Very rough estimate
     check_disk_space(output_dir, estimated_space)
     
     # Initialize audio converter
-    converter = AudioConverter(voice_name, speech_rate)
+    converter = AudioConverter(epub_path, voice=voice, speech_rate=speech_rate, cache=cache)
     
     # Create output filename
     output_filename = clean_filename(f"{metadata.title}.ogg")
@@ -78,7 +81,7 @@ def process_epub(
     audio_segments = []
     
     with tqdm(
-        total=len(chapters),
+        total=get_book_length(chapters),
         desc="Converting chapters",
         disable=quiet
     ) as pbar:
@@ -86,10 +89,12 @@ def process_epub(
             # Generate chapter announcement
             announcement = converter.generate_chapter_announcement(chapter.title)
             audio_segments.append(announcement)
+            logger.debug(f"Chapter {chapter.title} announcement duration: {get_duration(announcement)}")
             
             # Convert chapter text
             chapter_audio = converter.convert_text(chapter.content)
             audio_segments.append(chapter_audio)
+            logger.debug(f"Chapter {chapter.title} audio duration: {get_duration(chapter_audio)}")
             
             # Add chapter marker
             start_time = current_time
@@ -100,7 +105,7 @@ def process_epub(
                 current_time
             )
             
-            pbar.update(1)
+            pbar.update(len(chapter.content))
     
     # Concatenate all audio segments
     if not quiet:
@@ -161,6 +166,12 @@ def process_epub(
     help='Suppress progress reporting.'
 )
 @click.option(
+    '--cache',
+    '-c',
+    is_flag=True,
+    help='Enable caching of audio segments.'
+)
+@click.option(
     '--debug',
     '-d',
     is_flag=True,
@@ -169,11 +180,12 @@ def process_epub(
 def main(
     input_epub: str,
     output_dir: str,
-    voice: str,
+    voice: Union[str, Voice],
     rate: float,
     bitrate: str,
     quiet: bool,
-    debug: bool
+    debug: bool,
+    cache: bool
 ) -> None:
     """Convert an EPUB ebook to an OGG audiobook.
     
@@ -182,7 +194,14 @@ def main(
     if debug:
         logger.level("DEBUG")
         logger.debug(f"Debug mode enabled")
-        logger.debug(f"running in {os.getcwd()}")
+        logger.debug(f"Cache: {cache}")
+        logger.debug(f"Input EPUB: {input_epub}")
+        logger.debug(f"Output directory: {output_dir}")
+        logger.debug(f"Voice: {voice}")
+        logger.debug(f"Rate: {rate}")
+        logger.debug(f"Bitrate: {bitrate}")
+        logger.debug(f"Quiet: {quiet}")
+        logger.debug(f"Cache: {cache}")
     try:
         process_epub(
             input_epub,
@@ -191,7 +210,7 @@ def main(
             rate,
             bitrate,
             quiet,
-            debug
+            cache
         )
     except ConversionError as e:
         logger.exception(e)

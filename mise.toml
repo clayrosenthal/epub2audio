@@ -15,7 +15,7 @@ run = "uv build"
 
 [tasks.sample]
 description = "Run the project against a sample EPUB"
-run = "uv run epub2audio ./tests/data/sample.epub --debug"
+run = "uv run epub2audio '{{ config_root }}/tests/data/sample.epub' --debug"
 
 [tasks.format]
 description = "Format code with ruff"

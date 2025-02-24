@@ -3,6 +3,8 @@
 from enum import Enum, auto
 from dataclasses import dataclass
 from typing import Optional
+from pathlib import Path
+from os import getenv
 
 
 @dataclass
@@ -17,6 +19,9 @@ class VoiceInfo:
     training_duration: Optional[str] = None  # Training duration category
     traits: Optional[str] = None  # Emoji traits
     cc_by: Optional[str] = None  # Attribution if under CC BY license
+    local_path: Optional[str] = None  # Local path to the voice model
+
+
 
 
 class Voice(Enum):
@@ -221,3 +226,9 @@ class Voice(Enum):
             voices = [v for v in voices if v.lang_code == internal_code]
             
         return voices 
+    
+KOKORO_WEIGHTS_PATH = Path(getenv("KOKORO_WEIGHTS_PATH", "packages/kokoro-weights/"))
+
+if KOKORO_WEIGHTS_PATH.exists():
+    for file in KOKORO_WEIGHTS_PATH.glob("*.pt"):
+        Voice.get_by_name(file.stem).local_path = file.as_posix()

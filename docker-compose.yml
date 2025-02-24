@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./:/app
+      - ${INPUT_DIR:-./input}:/input
+      - ${OUTPUT_DIR:-./audiobooks}:/output
+    command: "/input/book.epub --output-dir /output"
+    environment:
+      - PYTHONPATH=/app
+    
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./:/app
+      - ${INPUT_DIR:-./input}:/input
+      - ${OUTPUT_DIR:-./audiobooks}:/output
+    working_dir: /app
+    environment:
+      - PYTHONPATH=/app
+    command: bash
+    stdin_open: true
+    tty: true 

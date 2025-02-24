@@ -1,3 +1,14 @@
 .venv/
 dist/
 .ignore/
+.pytest_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+htmlcov/
+
+
+packages/
+kokoro-tts
+kokoro-weights

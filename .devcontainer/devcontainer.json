@@ -1,0 +1,47 @@
+{
+  "name": "epub2audio-dev",
+  "build": {
+    "dockerfile": "../Dockerfile.dev",
+    "context": ".."
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "charliermarsh.ruff",
+        "matangover.mypy",
+        "ms-toolsai.jupyter",
+        "github.copilot"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.formatting.provider": "none",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.fixAll.ruff": "explicit",
+          "source.organizeImports.ruff": "explicit"
+        },
+        "ruff.path": ["/usr/local/bin/ruff"],
+        "ruff.enable": true,
+        "ruff.organizeImports": true,
+        "[python]": {
+          "editor.defaultFormatter": "ms-python.black-formatter"//"charliermarsh.ruff"
+        }
+      }
+    }
+  },
+  "runArgs": [
+    "--cap-add=SYS_PTRACE",
+    "--security-opt", "seccomp=unconfined"
+  ],
+  "mounts": [
+    "source=${localWorkspaceFolder}/../packages/kokoro-tts,target=/app/kokoro-tts,type=bind,consistency=cached"
+  ],
+  "remoteUser": "root",
+  "postCreateCommand": "uv pip install -e ."
+} 
