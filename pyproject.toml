@@ -1,0 +1,106 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "epub2audio"
+version = "0.1.0"
+description = "Convert EPUB ebooks to OGG audiobooks with chapter markers"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "AGPL-3.0-or-later"
+authors = [
+    { name = "Clay Rosenthal", email = "epub2audio@mail.clayrosenthal.me" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: End Users/Desktop",
+    "Topic :: Multimedia :: Sound/Audio :: Conversion",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "ebooklib>=0.18.0",
+    "kokoro>=0.1.0",
+    "soundfile>=0.12.1",
+    "pydub>=0.25.1",
+    "mutagen>=1.47.0",
+    "tqdm>=4.66.1",
+    "click>=8.1.7",
+    "beautifulsoup4>=4.13.3",
+    "torch>=2.6.0",
+    "torchaudio>=2.6.0",
+    # constraint-dependencies
+    "markupsafe~=2.1.3",
+]
+
+
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.1.9",
+    "mypy>=1.5.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/clayrosenthal/epub2audio"
+Repository = "https://github.com/clayrosenthal/epub2audio.git"
+Issues = "https://github.com/clayrosenthal/epub2audio/issues"
+
+[project.scripts]
+epub2audio = "src.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "integration: mark test as an integration test",
+]
+addopts = "-v --tb=short"
+
+[tool.ruff]
+target-version = "py39"
+line-length = 88
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "UP",   # pyupgrade
+    "D",    # pydocstyle
+]
+ignore = ["D203", "D213"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.ruff.isort]
+known-first-party = ["src"]
+combine-as-imports = true
+
+[tool.ruff.pydocstyle]
+convention = "google"
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true 
