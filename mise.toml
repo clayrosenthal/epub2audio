@@ -19,27 +19,27 @@ run = "uv run epub2audio ./tests/data/sample.epub --debug"
 
 [tasks.format]
 description = "Format code with ruff"
-run = "ruff format ."
+run = "uv run ruff format ."
 
 [tasks.lint]
 description = "Lint code with ruff"
-run = "ruff check ."
+run = "uv run ruff check ."
 
 [tasks.fix]
 description = "Fix auto-fixable issues with ruff"
-run = "ruff check --fix ."
+run = "uv run ruff check --fix ."
 
 [tasks.test]
 description = "Run tests"
-run = "pytest"
+run = "uv run pytest"
 depends = ["format", "lint", "fix"]
 
 [tasks.test-integration]
 description = "Run integration tests"
-run = "pytest --run-integration"
+run = "uv run pytest --run-integration"
 depends = ["test"]
 
 [tasks.test-coverage]
 description = "Run tests with coverage report"
-run = "pytest --cov=src tests/" 
+run = "uv run pytest --cov=src tests/" 
 depends = ["test"]

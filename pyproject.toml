@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = "AGPL-3.0-or-later"
 authors = [
-    { name = "Clay Rosenthal", email = "epub2audio@mail.clayrosenthal.me" },
+    { name = "Clay Rosenthal", email = "git@mail.clayrosenthal.me" },
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -73,7 +73,8 @@ addopts = "-v --tb=short"
 
 [tool.ruff]
 target-version = "py39"
-line-length = 88
+
+[tool.ruff.lint]
 select = [
     "E",    # pycodestyle errors
     "W",    # pycodestyle warnings
@@ -92,11 +93,11 @@ indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 known-first-party = ["src"]
 combine-as-imports = true
 
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = "google"
 
 [tool.mypy]
@@ -108,3 +109,10 @@ disallow_incomplete_defs = true
 
 [tool.uv.sources]
 kokoro = { path = "../packages/kokoro-tts", editable = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.4",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.9.7",
+]

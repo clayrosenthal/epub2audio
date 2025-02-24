@@ -6,9 +6,9 @@ import numpy as np
 from mutagen.oggvorbis import OggVorbis
 from src.audio_handler import AudioHandler
 from src.epub_processor import BookMetadata
-from src.audio_converter import AudioSegment
 from src.helpers import ConversionError
 from src.config import ErrorCodes
+from soundfile import SoundFile
 
 @pytest.fixture
 def sample_metadata():
@@ -16,7 +16,7 @@ def sample_metadata():
     return BookMetadata(
         title='Test Book',
         creator='Test Author',
-        date='2024',
+        date='2025',
         identifier='id123',
         language='en',
         publisher='Test Publisher',
@@ -71,7 +71,7 @@ def test_finalize_audio_file(audio_handler):
     """Test finalizing audio file."""
     # Create a mock audio segment
     data = np.zeros(1000, dtype=np.float32)
-    segment = AudioSegment(data=data, sample_rate=1000, duration=1.0)
+    segment = SoundFile(data=data, sample_rate=1000, duration=1.0)
     
     with patch('src.audio_handler.OggVorbis') as mock_ogg:
         mock_audio_file = Mock()
@@ -89,7 +89,7 @@ def test_finalize_audio_file(audio_handler):
 def test_finalize_audio_file_error(audio_handler):
     """Test error handling in finalize_audio_file."""
     data = np.zeros(1000, dtype=np.float32)
-    segment = AudioSegment(data=data, sample_rate=1000, duration=1.0)
+    segment = SoundFile(data=data, sample_rate=1000, duration=1.0)
     
     with patch.object(segment, 'save_audio_segment', side_effect=Exception('Save error')):
         with pytest.raises(ConversionError) as exc_info:
