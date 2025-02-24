@@ -9,7 +9,7 @@ AUDIO_CHANNELS = 1  # Mono
 
 # File handling
 DEFAULT_OUTPUT_DIR = "./audiobooks"
-TEMP_DIR = "./.epub2audio_temp"
+TEMP_DIR = ".epub2audio_"
 
 # Progress reporting
 PROGRESS_UPDATE_INTERVAL = 0.5  # seconds

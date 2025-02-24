@@ -1,26 +1,21 @@
 """Text-to-speech conversion using Kokoro."""
 
 import os
-from typing import List, Optional
+from loguru import logger
+from typing import List, Generator
 import soundfile as sf
+from soundfile import SoundFile
 import numpy as np
-from kokoro import KPipeline # Maybe I'll implement TextToSpeech, Voice
+from kokoro import KPipeline, KPipelineResult # Maybe I'll implement TextToSpeech, Voice
 from dataclasses import dataclass
 
-from .helpers import ConversionError, logger
+from .helpers import ConversionError, logger, get_tempfile
 from .config import (
     ErrorCodes,
     SAMPLE_RATE,
-    TEMP_DIR
+    TEMP_DIR,
 )
 from .voices import Voice
-
-@dataclass
-class AudioSegment:
-    """Class representing an audio segment."""
-    data: np.ndarray
-    sample_rate: int
-    duration: float
 
 class AudioConverter:
     """Class for converting text to speech using Kokoro."""
@@ -28,7 +23,7 @@ class AudioConverter:
     def __init__(
         self,
         voice: str | Voice = Voice.AF_HEART,
-        speech_rate: float = 1.0
+        speech_rate: float = 1.0,
     ):
         """Initialize the audio converter.
         
@@ -40,11 +35,11 @@ class AudioConverter:
             ConversionError: If the voice is invalid or TTS initialization fails
         """
         try:
-            self.tts = KPipeline()
             if isinstance(voice, Voice):
                 self.voice = voice
             else:
                 self.voice = self._get_voice(voice)
+            self.tts = KPipeline(lang_code=self.voice.lang_code)
             self.speech_rate = speech_rate
         except Exception as e:
             raise ConversionError(
@@ -71,36 +66,56 @@ class AudioConverter:
                 f"Invalid voice '{voice_name}'. Available voices: {', '.join(Voice.list_voices())}",
                 ErrorCodes.INVALID_VOICE
             )
+        
+    def _audio_data_generator(self, text: str) -> Generator[KPipelineResult, None, None]:
+        """Generate audio data from text.
+        
+        Args:
+            text: Text to convert
+        
+        Returns:
+            Generator[KPipeline.Result, None, None]: Audio data generator
+        """
+        # if not self.voice.startswith(self.tts.lang_code):
+        #     logger.warning(f"Voice {self.voice} is not made for language {self.tts.lang_code}")
+        try:
+            # audio_bytes = (result.audio.numpy() * 32767).astype(np.int16).tobytes()
+            yield from self.tts(text, voice=self.voice.name, speed=self.speech_rate, split_pattern=r"\n+")
+        except Exception as e:
+            raise ConversionError(
+                f"Failed to generate audio data: {str(e)}",
+                ErrorCodes.UNKNOWN_ERROR
+            )
     
-    def convert_text(self, text: str) -> AudioSegment:
+    def convert_text(self, text: str) -> SoundFile:
         """Convert text to speech.
         
         Args:
             text: Text to convert
         
         Returns:
-            AudioSegment: Converted audio
+            SoundFile: Converted audio
         """
         try:
+            # Create a temporary file
+            temp_file = get_tempfile()
+
+            audio_data = SoundFile(temp_file, mode='w', samplerate=SAMPLE_RATE, channels=1)
             # Generate speech
-            audio_data = self.tts.synthesize(
-                text,
-                voice=self.voice,
-                rate=self.speech_rate
-            )
+            for result in self._audio_data_generator(text):
+                phonemes = result.phonemes
+                audio = result.audio
+                logger.debug(phonemes)
+                # logger.debug(result.phonemes)
+                if audio is None:
+                    continue
+                audio_bytes = (audio.numpy() * 32767).astype(np.int16)
+                # .tobytes()
+                # wav_file.writeframes(audio_bytes)
+                audio_data.write(audio_bytes)
             
-            # Convert to float32 if needed
-            if audio_data.dtype != np.float32:
-                audio_data = audio_data.astype(np.float32)
-            
-            # Calculate duration
-            duration = len(audio_data) / SAMPLE_RATE
-            
-            return AudioSegment(
-                data=audio_data,
-                sample_rate=SAMPLE_RATE,
-                duration=duration
-            )
+            audio_data.close()
+            return audio_data
         
         except Exception as e:
             raise ConversionError(
@@ -108,21 +123,21 @@ class AudioConverter:
                 ErrorCodes.UNKNOWN_ERROR
             )
     
-    def generate_chapter_announcement(self, chapter_title: str) -> AudioSegment:
+    def generate_chapter_announcement(self, chapter_title: str) -> SoundFile:
         """Generate a chapter announcement.
         
         Args:
             chapter_title: Title of the chapter
         
         Returns:
-            AudioSegment: Chapter announcement audio
+            SoundFile: Chapter announcement audio
         """
         announcement_text = f"Chapter: {chapter_title}"
         return self.convert_text(announcement_text)
     
     def save_audio_segment(
         self,
-        segment: AudioSegment,
+        segment: SoundFile,
         output_path: str,
         temp: bool = False
     ) -> None:
@@ -137,13 +152,12 @@ class AudioConverter:
             directory = TEMP_DIR if temp else os.path.dirname(output_path)
             os.makedirs(directory, exist_ok=True)
             
-            sf.write(
+            segment.write(
                 output_path,
-                segment.data,
-                segment.sample_rate,
                 format='OGG',
                 subtype='VORBIS'
             )
+            segment.close()
         except Exception as e:
             raise ConversionError(
                 f"Failed to save audio file: {str(e)}",
@@ -151,29 +165,30 @@ class AudioConverter:
             )
     
     @staticmethod
-    def concatenate_segments(segments: List[AudioSegment]) -> AudioSegment:
+    def concatenate_segments(segments: List[SoundFile]) -> SoundFile:
         """Concatenate multiple audio segments.
         
         Args:
             segments: List of audio segments to concatenate
         
         Returns:
-            AudioSegment: Concatenated audio
+            SoundFile: Concatenated audio
         """
         if not segments:
             raise ValueError("No audio segments to concatenate")
         
         # Ensure all segments have the same sample rate
-        sample_rate = segments[0].sample_rate
-        if not all(s.sample_rate == sample_rate for s in segments):
+        sample_rate = segments[0].samplerate
+        if not all(s.samplerate == sample_rate for s in segments):
             raise ValueError("All audio segments must have the same sample rate")
         
         # Concatenate the audio data
-        concatenated_data = np.concatenate([s.data for s in segments])
-        total_duration = sum(s.duration for s in segments)
-        
-        return AudioSegment(
-            data=concatenated_data,
-            sample_rate=sample_rate,
-            duration=total_duration
-        ) 
+        temp_file = get_tempfile()
+        concatenated_data = SoundFile(temp_file, mode='w', samplerate=sample_rate, channels=1)
+        for segment in segments:
+            with SoundFile(segment.name, mode='r') as sf:
+                data = sf.read(frames=sf.frames)
+                concatenated_data.write(data)
+
+        concatenated_data.close()
+        return concatenated_data

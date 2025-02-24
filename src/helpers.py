@@ -2,19 +2,18 @@
 
 import os
 import shutil
-import logging
+import sys
+from tempfile import TemporaryDirectory,NamedTemporaryFile
+
+from loguru import logger
 from typing import Optional, Dict, Any
 from dataclasses import dataclass
 from tqdm import tqdm
-
-from .config import ErrorCodes, WarningTypes
+from soundfile import SoundFile
+from .config import ErrorCodes, WarningTypes, TEMP_DIR
 
 # Set up logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(levelname)s: %(message)s'
-)
-logger = logging.getLogger(__name__)
+logger.add(sys.stdout, level="INFO")
 
 @dataclass
 class ConversionWarning:
@@ -26,6 +25,13 @@ class ConversionWarning:
 
 class ConversionError(Exception):
     """Custom exception for conversion errors."""
+    def __init__(self, message: str, error_code: int):
+        self.message = message
+        self.error_code = error_code
+        super().__init__(self.message)
+
+class AudioHandlerError(Exception):
+    """Custom exception for audio handler errors."""
     def __init__(self, message: str, error_code: int):
         self.message = message
         self.error_code = error_code
@@ -133,3 +139,27 @@ def format_time(seconds: float) -> str:
     if hours > 0:
         return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
     return f"{minutes:02d}:{seconds:02d}" 
+
+def get_duration(audio: SoundFile) -> float:
+    """Get the duration of an audio file.
+    
+    Args:
+        audio: Audio file object
+    """
+    return audio.frames / (audio.samplerate * audio.channels * 1.0)
+
+def get_tempdir() -> str:
+    """Get the temporary directory.
+    
+    Returns:
+        str: Temporary directory
+    """
+    return TemporaryDirectory(prefix=TEMP_DIR, delete=False).name
+
+def get_tempfile(suffix: str = '.ogg') -> str:
+    """Get a temporary file name.
+    
+    Returns:
+        str: Temporary file name
+    """
+    return NamedTemporaryFile(delete=False, suffix=suffix, dir=get_tempdir()).name

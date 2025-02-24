@@ -11,7 +11,8 @@ from .audio_converter import AudioConverter
 from .audio_handler import AudioHandler
 from .helpers import (
     ConversionError,
-    ConversionWarning,
+    AudioHandlerError,
+    get_duration,
     ensure_dir_exists,
     check_disk_space,
     clean_filename,
@@ -32,7 +33,8 @@ def process_epub(
     voice_name: str,
     speech_rate: float,
     bitrate: str,
-    quiet: bool
+    quiet: bool,
+    debug: bool,
 ) -> None:
     """Process an EPUB file and convert it to an audiobook.
     
@@ -43,6 +45,7 @@ def process_epub(
         speech_rate: Speech rate multiplier
         bitrate: Output audio bitrate
         quiet: Whether to suppress progress reporting
+        debug: Whether to enable debug mode
     """
     # Create output directory
     ensure_dir_exists(output_dir)
@@ -90,7 +93,7 @@ def process_epub(
             
             # Add chapter marker
             start_time = current_time
-            current_time += announcement.duration + chapter_audio.duration
+            current_time += get_duration(announcement) + get_duration(chapter_audio)
             audio_handler.add_chapter_marker(
                 chapter.title,
                 start_time,
@@ -157,18 +160,29 @@ def process_epub(
     is_flag=True,
     help='Suppress progress reporting.'
 )
+@click.option(
+    '--debug',
+    '-d',
+    is_flag=True,
+    help='Enable debug mode.'
+)
 def main(
     input_epub: str,
     output_dir: str,
     voice: str,
     rate: float,
     bitrate: str,
-    quiet: bool
+    quiet: bool,
+    debug: bool
 ) -> None:
     """Convert an EPUB ebook to an OGG audiobook.
     
     INPUT_EPUB is the path to the EPUB file to convert.
     """
+    if debug:
+        logger.level("DEBUG")
+        logger.debug(f"Debug mode enabled")
+        logger.debug(f"running in {os.getcwd()}")
     try:
         process_epub(
             input_epub,
@@ -176,12 +190,19 @@ def main(
             voice,
             rate,
             bitrate,
-            quiet
+            quiet,
+            debug
         )
     except ConversionError as e:
-        click.echo(f"Error: {e.message}", err=True)
+        logger.exception(e)
+        click.echo(f"Conversion error: {e.message}", err=True)
+        exit(e.error_code)
+    except AudioHandlerError as e:
+        logger.exception(e)
+        click.echo(f"Audio handler error: {e.message}", err=True)
         exit(e.error_code)
     except Exception as e:
+        logger.exception(e)
         click.echo(f"Unexpected error: {str(e)}", err=True)
         exit(ErrorCodes.UNKNOWN_ERROR)
 

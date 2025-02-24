@@ -1,9 +1,9 @@
 """EPUB to Audiobook converter package."""
 
-from .cli import main
+from .cli import main, process_epub
 from .config import ErrorCodes, WarningTypes
 from .epub_processor import EPUBProcessor, Chapter, BookMetadata
-from .audio_converter import AudioConverter, AudioSegment
+from .audio_converter import AudioConverter
 from .audio_handler import AudioHandler
 from .helpers import ConversionError, ConversionWarning
 
@@ -13,13 +13,13 @@ __email__ = 'epub2audio@mail.clayrosenthal.me'
 
 __all__ = [
     'main',
+    'process_epub',
     'ErrorCodes',
     'WarningTypes',
     'EPUBProcessor',
     'Chapter',
     'BookMetadata',
     'AudioConverter',
-    'AudioSegment',
     'AudioHandler',
     'ConversionError',
     'ConversionWarning',

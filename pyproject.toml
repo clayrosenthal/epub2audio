@@ -7,7 +7,7 @@ name = "epub2audio"
 version = "0.1.0"
 description = "Convert EPUB ebooks to OGG audiobooks with chapter markers"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = "AGPL-3.0-or-later"
 authors = [
     { name = "Clay Rosenthal", email = "epub2audio@mail.clayrosenthal.me" },
@@ -37,6 +37,7 @@ dependencies = [
     "torchaudio>=2.6.0",
     # constraint-dependencies
     "markupsafe~=2.1.3",
+    "loguru>=0.7.3",
 ]
 
 
@@ -104,3 +105,6 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 disallow_incomplete_defs = true 
+
+[tool.uv.sources]
+kokoro = { path = "../packages/kokoro-tts", editable = true }

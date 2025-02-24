@@ -13,6 +13,10 @@ dir = "bin"
 description = "Build the project"
 run = "uv build"
 
+[tasks.sample]
+description = "Run the project against a sample EPUB"
+run = "uv run epub2audio ./tests/data/sample.epub --debug"
+
 [tasks.format]
 description = "Format code with ruff"
 run = "ruff format ."

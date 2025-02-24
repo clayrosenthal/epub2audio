@@ -1,13 +1,14 @@
 """Audio file handling and metadata management."""
 
 import os
+from shutil import move
 from typing import List, Dict, Any
 from mutagen.oggvorbis import OggVorbis
+from soundfile import SoundFile
 from dataclasses import asdict
 
 from .epub_processor import Chapter, BookMetadata
-from .audio_converter import AudioSegment
-from .helpers import ConversionError, format_time
+from .helpers import AudioHandlerError, format_time, logger
 from .config import ErrorCodes
 
 class AudioHandler:
@@ -70,34 +71,30 @@ class AudioHandler:
         
         # Add chapter markers
         for i, marker in enumerate(self.chapter_markers):
-            audio_file[f'CHAPTER{i:03d}'] = marker['title']
-            audio_file[f'CHAPTER{i:03d}START'] = marker['start_time_str']
-            audio_file[f'CHAPTER{i:03d}END'] = marker['end_time_str']
+            audio_file[f'CHAPTER{i:03d}NAME'] = marker['title']
+            audio_file[f'CHAPTER{i:03d}'] = marker['start_time_str']
     
-    def finalize_audio_file(self, final_segment: AudioSegment) -> None:
+    def finalize_audio_file(self, final_segment: SoundFile) -> None:
         """Write the final audio file with metadata.
         
         Args:
             final_segment: The final concatenated audio segment
         
         Raises:
-            ConversionError: If writing the audio file fails
+            AudioHandlerError: If writing the audio file fails
         """
         try:
-            # First save the audio data
-            final_segment.save_audio_segment(
-                final_segment,
-                self.output_path,
-                temp=False
-            )
-            
-            # Then add metadata
-            audio_file = OggVorbis(self.output_path)
-            self._write_metadata(audio_file)
+            # Add metadata
+            logger.debug(f"Adding metadata to final audio file, {final_segment.name}")
+            audio_file = OggVorbis(final_segment.name)
+            self._write_metadata(audio_file)    
+            logger.debug(f"Saving final audio file {audio_file.pprint()}")
             audio_file.save()
+            move(final_segment.name, self.output_path)
+            logger.debug(f"Final audio file saved to {self.output_path}")
             
         except Exception as e:
-            raise ConversionError(
+            raise AudioHandlerError(
                 f"Failed to write final audio file: {str(e)}",
                 ErrorCodes.FILESYSTEM_ERROR
             )
