@@ -66,3 +66,7 @@ description = "Run tests with coverage report"
 run = "uv run pytest --cov=src tests/"
 depends = ["test"]
 
+[tasks.docker-build]
+description = "Build the docker image"
+run = "docker build -t epub2audio ."
+depends = ["build"]
