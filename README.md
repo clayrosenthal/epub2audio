@@ -1,9 +1,3 @@
-# Warning
-
-This project is still under active development. It is not yet ready for production use.
-Using a [fork of kokoro](https://github.com/clayrosenthal/kokoro-tts) that adds some 
-features that are not yet available in the original repository.
-
 # EPUB to Audiobook Converter
 
 A command-line tool and library that converts EPUB ebooks to OGG audiobooks with chapter markers, using local text-to-speech processing with [Kokoro].
@@ -48,9 +42,7 @@ mise install
 Or manually with a virtual environment:
 ```bash
 python -m venv .venv
-source .venv/bin/activate  # Linux/macOS
-# or
-.venv\Scripts\activate  # Windows
+source .venv/bin/activate 
 pip install -e .
 ```
 
@@ -64,7 +56,7 @@ Convert an EPUB file to an audiobook with default settings:
 epub2audio input.epub
 ```
 
-The audiobook will be saved in the `./audiobooks` directory.
+The audiobook will be saved as `Book_Title.ogg`, but can be set with `--output`.
 
 ### Voice Selection
 
@@ -95,10 +87,9 @@ epub2audio input.epub --voice af_bella
 
 ```bash
 epub2audio input.epub \
-  --output-dir ./audiobooks \
+  --output output.ogg \
   --voice af_bella \
-  --rate 1.0 \
-  --bitrate 192k \
+  --speech-rate 1.0 \
   --quiet
 ```
 
@@ -107,9 +98,10 @@ epub2audio input.epub \
 - `input.epub`: Path to input EPUB file
 - `--output-dir`, `-o`: Directory for output audiobook files (default: ./audiobooks)
 - `--voice`, `-v`: Name of the voice to use (default: af_heart)
-- `--rate`, `-r`: Speech rate multiplier (default: 1.0)
+- `--speech-rate`, `-r`: Speech rate multiplier (default: 1.0)
 - `--bitrate`, `-b`: Output audio bitrate (default: 192k)
 - `--quiet`, `-q`: Suppress progress reporting
+- `--verbose`, `-v`: Output more verbose logs
 
 ## Voice Quality Grades
 

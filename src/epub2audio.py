@@ -12,7 +12,6 @@ from tqdm import tqdm  # type: ignore
 from .audio_converter import AudioConverter
 from .audio_handler import AudioHandler
 from .config import (
-    DEFAULT_BITRATE,
     DEFAULT_SPEECH_RATE,
     ErrorCodes,
 )
@@ -40,7 +39,6 @@ class Epub2Audio:
         output_path: StrPath = "",
         voice: Union[str, Voice] = Voice.AF_HEART,
         speech_rate: float = 1.0,
-        # bitrate: str  = DEFAULT_BITRATE,
         quiet: bool = True,
         cache: bool = True,
         convert: bool = True,
@@ -52,7 +50,6 @@ class Epub2Audio:
             output_path: Path to the output OGG file
             voice: Name of the voice to use
             speech_rate: Speech rate multiplier
-            bitrate: Output audio bitrate, not implented yet
             quiet: Whether to suppress progress reporting
             cache: Whether to enable caching of audio segments
             convert: Whether to convert the epub immediately
@@ -181,7 +178,7 @@ class Epub2Audio:
         # Display summary info
         display_generation = format_duration(self.generation_time)
         display_duration = format_duration(self.audio_handler.total_duration)
-        logger.info(f"\nAudiobook created successfully: {self.output_path}")
+        logger.success(f"\nAudiobook created successfully: {self.output_path}")
         logger.info(f"Total time generating: {display_generation}")
         logger.info(f"Total audio duration: {display_duration}")
         logger.info(f"Total chapters: {self.audio_handler.total_chapters}")
@@ -253,46 +250,45 @@ def process_epub(
     default=DEFAULT_SPEECH_RATE,
     help="Speech rate multiplier.",
 )
-@click.option(
-    "--bitrate", "-b", type=str, default=DEFAULT_BITRATE, help="Output audio bitrate."
-)
 @click.option("--quiet", "-q", is_flag=True, help="Suppress progress reporting.")
 @click.option("--cache", "-c", is_flag=True, help="Enable caching of audio segments.")
-@click.option("--debug", "-d", is_flag=True, help="Enable debug mode.")
+@click.option("--verbose", "-v", help="Enable verbose mode.", count=True)
+@click.version_option()
 def main(
     input_epub: Path,
     output: Path,
     voice: Union[str, Voice],
     speech_rate: float,
-    bitrate: str,
     quiet: bool,
     cache: bool,
-    debug: bool,
+    verbose: int,
     convert: bool = True,
 ) -> None:
     """Convert an EPUB ebook to an OGG audiobook.
 
     INPUT_EPUB is the path to the EPUB file to convert.
     """
-    if debug:
+    if quiet:
         logger.remove()
-        logger.add(sys.stderr, level="DEBUG")
-        logger.debug("Debug mode enabled")
-        logger.debug(f"Input EPUB: {input_epub}")
-        logger.debug(f"Output path: {output}")
-        logger.debug(f"Voice: {voice}")
-        logger.debug(f"Speech rate: {speech_rate}")
-        logger.debug(f"Bitrate: {bitrate}")
-        logger.debug(f"Quiet: {quiet}")
-        logger.debug(f"Cache: {cache}")
-        logger.debug(f"Convert: {convert}")
+    elif verbose:
+        logger.remove()
+        if verbose > 1:
+            logger.add(sys.stderr, level="DEBUG")
+        elif verbose > 2:
+            logger.add(sys.stderr, level="TRACE")
+        logger.trace(f"Input EPUB: {input_epub}")
+        logger.trace(f"Output path: {output}")
+        logger.trace(f"Voice: {voice}")
+        logger.trace(f"Speech rate: {speech_rate}")
+        logger.trace(f"Quiet: {quiet}")
+        logger.trace(f"Cache: {cache}")
+        logger.trace(f"Convert: {convert}")
     try:
         process_epub(
             input_epub,
             output,
             speech_rate,
             voice,
-            # bitrate,
             quiet,
             cache,
             convert,

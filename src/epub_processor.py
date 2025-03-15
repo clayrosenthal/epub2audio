@@ -87,9 +87,9 @@ class EpubProcessor:
         self.book = Book(metadata=self.metadata, chapters=self.chapters)
 
         logger.debug(f"Metadata: {self.metadata}")
-        logger.debug(f"Number of chapters: {len(self.chapters)}")
-        logger.debug(f"Chapter titles: {[chapter.title for chapter in self.chapters]}")
-        logger.debug(f"Book length: {get_book_length(self.chapters)}")
+        logger.trace(f"Number of chapters: {len(self.chapters)}")
+        logger.trace(f"Chapter titles: {[chapter.title for chapter in self.chapters]}")
+        logger.trace(f"Book length: {get_book_length(self.chapters)}")
 
     def _extract_metadata(self) -> BookMetadata:
         """Extract metadata from the EPUB file.
@@ -166,7 +166,7 @@ class EpubProcessor:
         book_title_added = False
 
         for cover in self.epub.get_items_of_type(ebooklib.ITEM_COVER):
-            logger.debug(f"Cover: {cover}")
+            logger.trace(f"Cover: {cover}")
             content = self._clean_text(cover.get_content().decode("utf-8"))
             title = self._extract_chapter_title(cover) or self.metadata.title
             chapters.append(
@@ -182,7 +182,7 @@ class EpubProcessor:
         for item in self.epub.get_items_of_type(ebooklib.ITEM_DOCUMENT):
             # Skip non-chapter items (e.g., TOC, copyright pages)
             if not self._is_chapter(item):
-                logger.debug(f"Skipping non-chapter item: {item}")
+                logger.trace(f"Skipping non-chapter item: {item}")
                 continue
 
             # Extract title from content or use fallback
@@ -205,7 +205,7 @@ class EpubProcessor:
                 chapter.order = -1
                 chapter.content = f"{self.metadata.book_sentence}"
                 chapters.append(chapter)
-                logger.debug(f"Book title added: {chapter}")
+                logger.trace(f"Book title added: {chapter}")
                 book_title_added = True
                 continue
 
