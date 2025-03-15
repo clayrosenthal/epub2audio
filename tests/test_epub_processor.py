@@ -1,15 +1,17 @@
 """Unit tests for EPUB processing module."""
 
+from pathlib import Path
+
 import pytest
 from ebooklib import epub
 
 from src.config import ErrorCodes
-from src.epub_processor import BookMetadata, Chapter, EPUBProcessor
+from src.epub_processor import BookMetadata, Chapter, EpubProcessor
 from src.helpers import ConversionError
 
 
 @pytest.fixture
-def sample_epub(tmp_path):
+def sample_epub(tmp_path: Path) -> str:
     """Create a sample EPUB file for testing."""
     book = epub.EpubBook()
 
@@ -46,27 +48,26 @@ def sample_epub(tmp_path):
     return str(epub_path)
 
 
-def test_epub_processor_init(sample_epub):
+def test_epub_processor_init(sample_epub: str) -> None:
     """Test EPUBProcessor initialization."""
-    processor = EPUBProcessor(sample_epub)
+    processor = EpubProcessor(sample_epub)
     assert processor is not None
     assert processor.warnings == []
 
 
-def test_epub_processor_init_invalid_file(tmp_path):
+def test_epub_processor_init_invalid_file(tmp_path: Path) -> None:
     """Test EPUBProcessor initialization with invalid file."""
     invalid_path = tmp_path / "invalid.epub"
     invalid_path.write_text("not an epub file")
 
     with pytest.raises(ConversionError) as exc_info:
-        EPUBProcessor(str(invalid_path))
+        EpubProcessor(str(invalid_path))
     assert exc_info.value.error_code == ErrorCodes.INVALID_EPUB
 
 
-def test_extract_metadata(sample_epub):
+def test_extract_metadata(sample_epub: str) -> None:
     """Test metadata extraction."""
-    processor = EPUBProcessor(sample_epub)
-    metadata = processor.extract_metadata()
+    metadata = EpubProcessor(sample_epub).metadata
 
     assert isinstance(metadata, BookMetadata)
     assert metadata.title == "Test Book"
@@ -75,10 +76,9 @@ def test_extract_metadata(sample_epub):
     assert metadata.identifier == "id123"
 
 
-def test_extract_chapters(sample_epub):
+def test_extract_chapters(sample_epub: str) -> None:
     """Test chapter extraction."""
-    processor = EPUBProcessor(sample_epub)
-    chapters = processor.extract_chapters()
+    chapters = EpubProcessor(sample_epub).chapters
 
     assert len(chapters) == 2
     assert all(isinstance(c, Chapter) for c in chapters)
@@ -88,9 +88,9 @@ def test_extract_chapters(sample_epub):
     assert "second chapter" in chapters[1].content.lower()
 
 
-def test_clean_text():
+def test_clean_text() -> None:
     """Test HTML cleaning."""
-    processor = EPUBProcessor("dummy_path")  # Path doesn't matter for this test
+    processor = EpubProcessor("dummy_path")  # Path doesn't matter for this test
     html = """
         <div>
             <script>alert('test');</script>
@@ -108,13 +108,13 @@ def test_clean_text():
     assert len(processor.warnings) == 1  # Warning for img tag
 
 
-def test_is_chapter():
+def test_is_chapter() -> None:
     """Test chapter identification."""
-    processor = EPUBProcessor("dummy_path")
+    processor = EpubProcessor("dummy_path")
 
     # Create dummy EpubItem objects
     class DummyItem:
-        def __init__(self, file_name):
+        def __init__(self, file_name: str) -> None:
             self.file_name = file_name
 
     assert processor._is_chapter(DummyItem("chapter1.xhtml"))
