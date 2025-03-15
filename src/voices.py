@@ -1,15 +1,43 @@
 """Voice definitions for text-to-speech conversion."""
 
-from enum import Enum, auto
 from dataclasses import dataclass
-from typing import Optional
+from enum import Enum
 from pathlib import Path
-from os import getenv
+from typing import Optional, Union
+
+from .config import KOKORO_PATHS
+from .helpers import logger
+
+# Language code mappings
+LANG_CODES = {
+    "a": "American English",
+    "b": "British English",
+    "e": "Spanish",
+    "f": "French",
+    "h": "Hindi",
+    "i": "Italian",
+    "p": "Brazilian Portuguese",
+    "j": "Japanese",
+    "z": "Mandarin Chinese",
+}
+
+ALIASES = {
+    "en-us": "a",
+    "en-gb": "b",
+    "es": "e",
+    "fr-fr": "f",
+    "hi": "h",
+    "it": "i",
+    "pt-br": "p",
+    "ja": "j",
+    "zh": "z",
+}
 
 
 @dataclass
 class VoiceInfo:
     """Information about a voice."""
+
     name: str  # Internal name used by the TTS system
     sha256: str  # SHA256 hash of the voice model
     gender: str  # "F" or "M"
@@ -22,11 +50,9 @@ class VoiceInfo:
     local_path: Optional[str] = None  # Local path to the voice model
 
 
-
-
 class Voice(Enum):
     """Available voices for text-to-speech conversion."""
-    
+
     # American English Voices
     AF_HEART = VoiceInfo("af_heart", "0ab5709b", "F", "a", "A", None, None, "❤️")
     AF_ALLOY = VoiceInfo("af_alloy", "6d877149", "F", "a", "C", "B", "MM minutes")
@@ -34,7 +60,9 @@ class Voice(Enum):
     AF_BELLA = VoiceInfo("af_bella", "8cb64e02", "F", "a", "A-", "A", "HH hours", "🔥")
     AF_JESSICA = VoiceInfo("af_jessica", "cdfdccb8", "F", "a", "D", "C", "MM minutes")
     AF_KORE = VoiceInfo("af_kore", "8bfbc512", "F", "a", "C+", "B", "H hours")
-    AF_NICOLE = VoiceInfo("af_nicole", "c5561808", "F", "a", "B-", "B", "HH hours", "🎧")
+    AF_NICOLE = VoiceInfo(
+        "af_nicole", "c5561808", "F", "a", "B-", "B", "HH hours", "🎧"
+    )
     AF_NOVA = VoiceInfo("af_nova", "e0233676", "F", "a", "C", "B", "MM minutes")
     AF_RIVER = VoiceInfo("af_river", "e149459b", "F", "a", "D", "C", "MM minutes")
     AF_SARAH = VoiceInfo("af_sarah", "49bd364e", "F", "a", "C+", "B", "H hours")
@@ -61,10 +89,42 @@ class Voice(Enum):
 
     # Japanese Voices
     JF_ALPHA = VoiceInfo("jf_alpha", "1bf4c9dc", "F", "j", "C+", "B", "H hours")
-    JF_GONGITSUNE = VoiceInfo("jf_gongitsune", "1b171917", "F", "j", "C", "B", "MM minutes", None, "gongitsune")
-    JF_NEZUMI = VoiceInfo("jf_nezumi", "d83f007a", "F", "j", "C-", "B", "M minutes", None, "nezuminoyomeiri")
-    JF_TEBUKURO = VoiceInfo("jf_tebukuro", "0d691790", "F", "j", "C", "B", "MM minutes", None, "tebukurowokaini")
-    JM_KUMO = VoiceInfo("jm_kumo", "98340afd", "M", "j", "C-", "B", "M minutes", None, "kumonoito")
+    JF_GONGITSUNE = VoiceInfo(
+        "jf_gongitsune",
+        "1b171917",
+        "F",
+        "j",
+        "C",
+        "B",
+        "MM minutes",
+        None,
+        "gongitsune",
+    )
+    JF_NEZUMI = VoiceInfo(
+        "jf_nezumi",
+        "d83f007a",
+        "F",
+        "j",
+        "C-",
+        "B",
+        "M minutes",
+        None,
+        "nezuminoyomeiri",
+    )
+    JF_TEBUKURO = VoiceInfo(
+        "jf_tebukuro",
+        "0d691790",
+        "F",
+        "j",
+        "C",
+        "B",
+        "MM minutes",
+        None,
+        "tebukurowokaini",
+    )
+    JM_KUMO = VoiceInfo(
+        "jm_kumo", "98340afd", "M", "j", "C-", "B", "M minutes", None, "kumonoito"
+    )
 
     # Mandarin Chinese Voices
     ZF_XIAOBEI = VoiceInfo("zf_xiaobei", "9b76be63", "F", "z", "D", "C", "MM minutes")
@@ -82,7 +142,9 @@ class Voice(Enum):
     EM_SANTA = VoiceInfo("em_santa", "aa8620cb", "M", "e")
 
     # French Voices
-    FF_SIWIS = VoiceInfo("ff_siwis", "8073bf2d", "F", "f", "B-", "B", "<11 hours", None, "SIWIS")
+    FF_SIWIS = VoiceInfo(
+        "ff_siwis", "8073bf2d", "F", "f", "B-", "B", "<11 hours", None, "SIWIS"
+    )
 
     # Hindi Voices
     HF_ALPHA = VoiceInfo("hf_alpha", "06906fe0", "F", "h", "C", "B", "MM minutes")
@@ -98,31 +160,6 @@ class Voice(Enum):
     PF_DORA = VoiceInfo("pf_dora", "07e4ff98", "F", "p")
     PM_ALEX = VoiceInfo("pm_alex", "cf0ba8c5", "M", "p")
     PM_SANTA = VoiceInfo("pm_santa", "d4210316", "M", "p")
-
-    # Language code mappings
-    LANG_CODES = {
-        'a': 'American English',
-        'b': 'British English',
-        'e': 'Spanish',
-        'f': 'French',
-        'h': 'Hindi',
-        'i': 'Italian',
-        'p': 'Brazilian Portuguese',
-        'j': 'Japanese',
-        'z': 'Mandarin Chinese',
-    }
-
-    ALIASES = {
-        'en-us': 'a',
-        'en-gb': 'b',
-        'es': 'e',
-        'fr-fr': 'f',
-        'hi': 'h',
-        'it': 'i',
-        'pt-br': 'p',
-        'ja': 'j',
-        'zh': 'z',
-    }
 
     @property
     def info(self) -> VoiceInfo:
@@ -150,9 +187,14 @@ class Voice(Enum):
         return self.value.lang_code
 
     @property
+    def local_path(self) -> str | None:
+        """Get the voice language code."""
+        return self.value.local_path
+
+    @property
     def language(self) -> str:
         """Get the full language name or code."""
-        return self.LANG_CODES[self.value.lang_code]
+        return LANG_CODES[self.value.lang_code]
 
     @property
     def quality_grade(self) -> Optional[str]:
@@ -169,66 +211,83 @@ class Voice(Enum):
         """Check if the voice is male."""
         return self.value.gender == "M"
 
+    def set_path(self, voice_path: Union[str, Path]) -> bool:
+        """Set local path, if it exists."""
+        if Path(voice_path).is_file():
+            self.value.local_path = str(voice_path)
+            return True
+        return False
+
     @classmethod
     def get_by_name(cls, name: str) -> "Voice":
         """Get a voice by its name.
-        
+
         Args:
             name: The name of the voice to get.
-            
+
         Returns:
             The voice enum value.
-            
+
         Raises:
             ValueError: If no voice with the given name exists.
         """
         for voice in cls:
             if voice.name == name:
+                local_path = Path(KOKORO_PATHS["voice_weights"]) / f"{name}.pt"
+                if Path(local_path).is_file():
+                    voice.value.local_path = str(local_path)
                 return voice
         raise ValueError(f"No voice named '{name}'")
 
     @classmethod
-    def list_voices(cls, gender: Optional[str] = None, min_grade: Optional[str] = None, lang_code: Optional[str] = None) -> list["Voice"]:
+    def list_voices(
+        cls,
+        gender: Optional[str] = None,
+        min_grade: Optional[str] = None,
+        lang_code: Optional[str] = None,
+    ) -> list["Voice"]:
         """List available voices with optional filtering.
-        
+
         Args:
             gender: Optional filter by gender ("F" or "M")
             min_grade: Optional minimum quality grade (A-F)
-            lang_code: Optional language code (can be alias like 'en-us' or internal code like 'a')
-            
+            lang_code: Optional language code,
+                can be alias like 'en-us' or internal code like 'a'
+
         Returns:
             List of voices matching the criteria.
         """
         voices = list(cls)
-        
+
         if gender:
             voices = [v for v in voices if v.gender == gender.upper()]
-            
+
         if min_grade:
             # Convert grade to numeric value (A=4, B=3, etc.)
             def grade_to_num(grade: Optional[str]) -> float:
                 if not grade:
                     return -1
-                base = 4 - (ord(grade[0]) - ord('A'))
-                modifier = grade[1] if len(grade) > 1 else ''
-                if modifier == '+':
+                base = 4.0 - (ord(grade[0]) - ord("A"))
+                modifier = grade[1] if len(grade) > 1 else ""
+                if modifier == "+":
                     base += 0.3
-                elif modifier == '-':
+                elif modifier == "-":
                     base -= 0.3
                 return base
-            
+
             min_num = grade_to_num(min_grade)
             voices = [v for v in voices if grade_to_num(v.quality_grade) >= min_num]
 
         if lang_code:
             # Convert alias to internal code if needed
-            internal_code = cls.ALIASES.get(lang_code, lang_code)
+            internal_code = ALIASES.get(lang_code, lang_code)
             voices = [v for v in voices if v.lang_code == internal_code]
-            
-        return voices 
-    
-KOKORO_WEIGHTS_PATH = Path(getenv("KOKORO_WEIGHTS_PATH", "packages/kokoro-weights/"))
 
-if KOKORO_WEIGHTS_PATH.exists():
-    for file in KOKORO_WEIGHTS_PATH.glob("*.pt"):
-        Voice.get_by_name(file.stem).local_path = file.as_posix()
+        return voices
+
+
+if Path(KOKORO_PATHS["voice_weights"]).exists():
+    logger.debug("weight path exists")
+    for file in Path(KOKORO_PATHS["voice_weights"]).glob("*.pt"):
+        logger.debug(f"found voice file: {file}")
+        Voice.get_by_name(file.stem).set_path(file)

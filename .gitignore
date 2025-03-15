@@ -8,8 +8,10 @@ dist/
 .coverage
 htmlcov/
 books/
-
+*.pyc
+**/__pycache__/
 
 packages/
 kokoro-tts
 kokoro-weights
+books

@@ -50,6 +50,7 @@ dev = [
     "ruff>=0.9.7",
     "mypy>=1.5.1",
 ]
+
 [dependency-groups]
 dev = [
     "pytest>=8.3.4",
@@ -64,7 +65,8 @@ Repository = "https://github.com/clayrosenthal/epub2audio.git"
 Issues = "https://github.com/clayrosenthal/epub2audio/issues"
 
 [project.scripts]
-epub2audio = "src.cli:main"
+epub2audio = "src.epub2audio:main"
+
 
 [tool.hatch.build.targets.wheel]
 packages = ["src"]
@@ -96,7 +98,10 @@ select = [
     "UP",   # pyupgrade
     "D",    # pydocstyle
 ]
-ignore = ["D203", "D213"]
+ignore = [
+    "D203", 
+    "D213",
+]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -123,6 +128,7 @@ index-strategy = "unsafe-best-match"
 
 [tool.uv.sources]
 kokoro = { path = "packages/kokoro-tts", editable = true }
+playsound = { git = "https://github.com/taconi/playsound" }
 
 [[tool.uv.index]]
 url = "https://download.pytorch.org/whl/rocm6.2.4"
