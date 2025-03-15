@@ -43,6 +43,12 @@ dependencies = [
 [tool.uv-dynamic-versioning]
 style = "semver"
 
+[tool.hatch.build.hooks.version]
+path = "src/_version.py"
+template = '''
+version = "{version}"
+'''
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.3.4",

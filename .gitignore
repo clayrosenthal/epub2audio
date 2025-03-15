@@ -10,8 +10,8 @@ htmlcov/
 books/
 *.pyc
 **/__pycache__/
+src/_version.py
 
 packages/
-kokoro-tts
 kokoro-weights
 books

@@ -33,7 +33,7 @@ sources = ["*.py"]
 
 [tasks.build]
 description = "Build the project"
-run = "uv build"
+run = "uvx --from build pyproject-build"
 depends = ["lint"]
 
 [tasks.gen-sample]
