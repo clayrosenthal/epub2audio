@@ -1,5 +1,6 @@
 """EPUB processing and text extraction module."""
 
+import base64
 import re
 from dataclasses import dataclass
 from typing import Optional
@@ -10,7 +11,7 @@ from ebooklib import epub
 from loguru import logger
 
 from .config import METADATA_FIELDS, ErrorCodes, WarningTypes
-from .helpers import ConversionError, ConversionWarning
+from .helpers import ConversionError, ConversionWarning, StrPath
 
 
 @dataclass
@@ -34,6 +35,7 @@ class BookMetadata:
     language: Optional[str] = None
     publisher: Optional[str] = None
     description: Optional[str] = None
+    cover_image: Optional[str] = None  # Base64 encoded str
 
     @property
     def book_sentence(self) -> str:
@@ -64,7 +66,7 @@ def get_book_length(chapters: list[Chapter]) -> int:
 class EpubProcessor:
     """Class for processing EPUB files and extracting content."""
 
-    def __init__(self, epub_path: str):
+    def __init__(self, epub_path: StrPath):
         """Initialize the EPUB processor.
 
         Args:
@@ -118,6 +120,12 @@ class EpubProcessor:
                     )
                 )
 
+        for cover in self.epub.get_items_of_type(ebooklib.ITEM_COVER):
+            logger.trace(f"Cover: {cover}")
+            cover_bytes = cover.get_content()
+            if cover_bytes:
+                metadata["cover_image"] = base64.b64encode(cover_bytes).decode("utf-8")
+
         return BookMetadata(**metadata)
 
     def _clean_text(self, html_content: str) -> str:
@@ -164,20 +172,6 @@ class EpubProcessor:
         chapters = []
         order = 0
         book_title_added = False
-
-        for cover in self.epub.get_items_of_type(ebooklib.ITEM_COVER):
-            logger.trace(f"Cover: {cover}")
-            content = self._clean_text(cover.get_content().decode("utf-8"))
-            title = self._extract_chapter_title(cover) or self.metadata.title
-            chapters.append(
-                Chapter(
-                    title=title,
-                    content=content,
-                    order=-1,
-                    id=cover.id,
-                )
-            )
-            book_title_added = True
 
         for item in self.epub.get_items_of_type(ebooklib.ITEM_DOCUMENT):
             # Skip non-chapter items (e.g., TOC, copyright pages)

@@ -250,13 +250,13 @@ def format_duration(seconds: float) -> str:
 
     elif seconds < 3600:
         # Format as minutes:seconds (1:30)
-        minutes = seconds // 60
+        minutes = int(seconds // 60)
         remaining_seconds = seconds % 60
-        return f"{minutes}:{remaining_seconds:02f}"
+        return f"{minutes:02d}:{remaining_seconds:02f}"
 
     else:
         # Format as hours:minutes:seconds (2:30:00)
-        hours = seconds // 3600
-        minutes = (seconds % 3600) // 60
+        hours = int(seconds // 3600)
+        minutes = int((seconds % 3600) // 60)
         remaining_seconds = seconds % 60
         return f"{hours}:{minutes:02d}:{remaining_seconds:02f}"

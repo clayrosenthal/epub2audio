@@ -9,7 +9,7 @@ dist/
 htmlcov/
 books/
 *.pyc
-**/__pycache__/
+__pycache__
 src/_version.py
 
 packages/

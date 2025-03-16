@@ -1,6 +1,6 @@
 # EPUB to Audiobook Converter
 
-A command-line tool and library that converts EPUB ebooks to OGG audiobooks with chapter markers, using local text-to-speech processing with [Kokoro].
+A command-line tool and library that converts EPUB ebooks to OGG audiobooks with chapter markers, using local text-to-speech processing with [Kokoro](https://hf.co/hexgrad/Kokoro-82M).
 
 ## Features
 
@@ -99,7 +99,6 @@ epub2audio input.epub \
 - `--output-dir`, `-o`: Directory for output audiobook files (default: ./audiobooks)
 - `--voice`, `-v`: Name of the voice to use (default: af_heart)
 - `--speech-rate`, `-r`: Speech rate multiplier (default: 1.0)
-- `--bitrate`, `-b`: Output audio bitrate (default: 192k)
 - `--quiet`, `-q`: Suppress progress reporting
 - `--verbose`, `-v`: Output more verbose logs
 
@@ -125,10 +124,10 @@ src/
 ├── epub_processor.py      # EPUB parsing and text extraction
 ├── audio_converter.py     # TTS conversion using Kokoro
 ├── audio_handler.py       # OGG creation, chapter markers, metadata
-├── cli.py                # Command line interface
-├── voices.py             # Voice definitions and management
-├── helpers.py            # Utility functions
-└── config.py             # Configuration settings
+├── epub2audio.py          # Main class, command line interface
+├── voices.py              # Voice definitions and management
+├── helpers.py             # Utility functions
+└── config.py              # Configuration settings
 ```
 
 ### Running Tests
@@ -208,7 +207,8 @@ AGPL-3.0-or-later - See LICENSE file for details
 
 ## Acknowledgments
 
-- [Kokoro](https://github.com/kokoro) for text-to-speech processing
+- [Kokoro](https://github.com/hexgrad/kokoro) for text-to-speech processing
+  - [Huggingface](https://hf.co/hexgrad/Kokoro-82M) for model weights
 - [ebooklib](https://github.com/aerkalov/ebooklib) for EPUB handling
 - [mutagen](https://github.com/quodlibet/mutagen) for audio metadata
 - Voice training data contributors (see individual voice attributions)

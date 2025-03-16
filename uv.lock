@@ -450,7 +450,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/e8/1d/90bb33317d756c25b
 
 [[package]]
 name = "epub2audio"
-version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "beautifulsoup4" },

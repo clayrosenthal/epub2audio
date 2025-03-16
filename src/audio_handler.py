@@ -83,6 +83,13 @@ class AudioHandler:
             audio_file["PUBLISHER"] = metadata_dict["publisher"]
         if "description" in metadata_dict:
             audio_file["DESCRIPTION"] = metadata_dict["description"]
+        if "cover_image" in metadata_dict:
+            audio_file["METADATA_BLOCK_PICTURE"] = metadata_dict["cover_image"]
+
+        audio_file["ORGANIZATION"] = "epub2audio"
+        audio_file["PERFORMER"] = "Kokoro TextToSpeech"
+        audio_file["COPYRIGHT"] = "https://creativecommons.org/licenses/by-sa/4.0/"
+
 
         # Add chapter markers
         for i, marker in enumerate(self.chapter_markers):
@@ -100,10 +107,10 @@ class AudioHandler:
         """
         try:
             # Add metadata
-            logger.debug(f"Adding metadata to final audio file, {final_segment.name}")
+            logger.trace(f"Adding metadata to final audio file, {final_segment.name}")
             audio_file = OggVorbis(final_segment.name)
             self._write_metadata(audio_file)
-            logger.debug(f"Saving final audio file {audio_file.pprint()}")
+            logger.trace(f"Saving final audio file {audio_file.pprint()}")
             audio_file.save()
             move(final_segment.name, self.output_path)
             logger.debug(f"Final audio file saved to {self.output_path}")

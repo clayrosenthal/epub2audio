@@ -9,6 +9,7 @@ import numpy as np
 from kokoro import KModel, KPipeline  # Maybe I'll implement TextToSpeech, Voice
 from loguru import logger
 from soundfile import SoundFile
+from tqdm import tqdm  # type: ignore
 
 from .config import (
     KOKORO_PATHS,
@@ -32,6 +33,7 @@ class AudioConverter:
         voice: str | Voice = Voice.AF_HEART,
         speech_rate: float = 1.0,
         cache: bool = True,
+        quiet: bool = True,
     ):
         """Initialize the audio converter.
 
@@ -62,6 +64,7 @@ class AudioConverter:
             self.speech_rate = speech_rate
             self.cache_dir_manager = CacheDirManager(epub_path)
             self.cache = cache
+            self.quiet = quiet
         except Exception as e:
             raise ConversionError(
                 f"Failed to initialize TextToSpeech: {str(e)}", ErrorCodes.INVALID_VOICE
@@ -181,10 +184,15 @@ class AudioConverter:
         concatenated_data = SoundFile(
             temp_file, mode="w", samplerate=sample_rate, channels=1
         )
-        for segment in segments:
-            with SoundFile(segment.name, mode="r") as sf:
-                data = sf.read(frames=sf.frames)
+        with tqdm(
+            total=sum(len(segment.frames) for segment in segments),
+            desc="Concatenating audio segments",
+            disable=self.quiet,
+        ) as pbar:
+            for segment in segments:
+                with SoundFile(segment.name, mode="r") as sf:
+                    data = sf.read()
                 concatenated_data.write(data)
-
+                pbar.update(len(data))
         concatenated_data.close()
         return concatenated_data

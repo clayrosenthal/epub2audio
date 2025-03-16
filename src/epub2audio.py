@@ -42,6 +42,7 @@ class Epub2Audio:
         quiet: bool = True,
         cache: bool = True,
         convert: bool = True,
+        max_chapters: int = -1,
     ):
         """Creates an AudioBook from an Epub.
 
@@ -53,12 +54,14 @@ class Epub2Audio:
             quiet: Whether to suppress progress reporting
             cache: Whether to enable caching of audio segments
             convert: Whether to convert the epub immediately
+            max_chapters: Maximum number of chapters to process, or -1 for no limit.
         """
         self.cache = cache
         self.quiet = quiet
         self.epub_path = epub_path
         self.voice = voice
         self.speech_rate = speech_rate
+        self.max_chapters = max_chapters
         self._parse_epub()
         # Create output filename
         if not output_path:
@@ -79,6 +82,7 @@ class Epub2Audio:
             voice=self.voice,
             speech_rate=self.speech_rate,
             cache=self.cache,
+            quiet=self.quiet,
         )
         self.audio_handler = AudioHandler(self.output_path, self.metadata)
 
@@ -108,6 +112,10 @@ class Epub2Audio:
         self.warnings = self.epub.warnings
 
     def _process_epub_chapter(self, chapter: Chapter) -> None:
+        if self.max_chapters > 0 and len(self.chapters) > self.max_chapters:
+            logger.info(f"Skipping chapter {chapter.title} as max chapters reached")
+            return
+
         # Generate chapter announcement
         announcement = self.converter.convert_text(chapter.title)
         self.audio_segments.append(announcement)
@@ -198,6 +206,7 @@ def process_epub(
     quiet: bool = True,
     cache: bool = True,
     convert: bool = True,
+    max_chapters: int = -1,
 ) -> Epub2Audio:
     """Process an EPUB file and convert it to an audiobook.
 
@@ -209,6 +218,7 @@ def process_epub(
         quiet: Whether to suppress progress reporting
         cache: Whether to enable caching of audio segments
         convert: Whether to convert the epub immediately
+        max_chapters: Maximum number of chapters to process, or -1 for no limit.
     """
     return Epub2Audio(
         input_epub,
@@ -218,6 +228,7 @@ def process_epub(
         quiet=quiet,
         cache=cache,
         convert=convert,
+        max_chapters=max_chapters,
     )
 
 
@@ -253,6 +264,14 @@ def process_epub(
 @click.option("--quiet", "-q", is_flag=True, help="Suppress progress reporting.")
 @click.option("--cache", "-c", is_flag=True, help="Enable caching of audio segments.")
 @click.option("--verbose", "-v", help="Enable verbose mode.", count=True)
+@click.option(
+    "--max-chapters",
+    "-m",
+    type=int,
+    help="Maximum number of chapters to process, or -1 for no limit.",
+    default=-1,
+    show_default=True,
+)
 @click.version_option()
 def main(
     input_epub: Path,
@@ -263,6 +282,7 @@ def main(
     cache: bool,
     verbose: int,
     convert: bool = True,
+    max_chapters: int = -1,
 ) -> None:
     """Convert an EPUB ebook to an OGG audiobook.
 
@@ -283,6 +303,7 @@ def main(
         logger.trace(f"Quiet: {quiet}")
         logger.trace(f"Cache: {cache}")
         logger.trace(f"Convert: {convert}")
+        logger.trace(f"Max chapters: {max_chapters}")
     try:
         process_epub(
             input_epub,
@@ -292,18 +313,19 @@ def main(
             quiet,
             cache,
             convert,
+            max_chapters,
         )
     except ConversionError as e:
         logger.exception(e)
-        logger.info(f"Conversion error: {e.message}", err=True)
+        logger.error(f"Conversion error: {e.message}", err=True)
         exit(e.error_code)
     except AudioHandlerError as e:
         logger.exception(e)
-        logger.info(f"Audio handler error: {e.message}", err=True)
+        logger.error(f"Audio handler error: {e.message}", err=True)
         exit(e.error_code)
     except Exception as e:
         logger.exception(e)
-        logger.info(f"Unexpected error: {str(e)}", err=True)
+        logger.error(f"Unexpected error: {str(e)}", err=True)
         exit(ErrorCodes.UNKNOWN_ERROR)
 
 
