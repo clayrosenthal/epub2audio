@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -S uv run --with ebooklib>=0.18.0 --script
+# -S uv run --script
 # /// script
 # dependencies = [
 #   "click>=8.1.3",
@@ -11,18 +11,19 @@
 #MISE description="Read a EPUB file"
 """Read a EPUB file."""
 
+import sys
+
 from pathlib import Path
 
 import click
 import ebooklib  # type: ignore
 from ebooklib import epub
 
-from epub2audio import EpubProcessor
-
+from src.epub_processor import EpubProcessor
 
 
 @click.command()
-@click.argument("path", type=click.Path(exists=True))
+@click.argument("path", type=click.Path(exists=True), default="tests/data/sample.epub")
 def read_epub(path: Path) -> epub.EpubBook:
     """Read a EPUB file carefully.
 
@@ -34,12 +35,13 @@ def read_epub(path: Path) -> epub.EpubBook:
     Returns:
         epub.EpubBook: The EPUB book
     """
-    # epub_processor = EpubProcesss
+    # from pdb import set_trace; set_trace()
+    epub_processor = EpubProcessor(path)
     # Read a new EPUB book
-    book = epub.read_epub(path)
+    # book = epub.read_epub(path)
 
-    print(book.get_items_of_type(ebooklib.ITEM_DOCUMENT))
-    from code import interact; interact(local=locals())
+    # print(book.get_items_of_type(ebooklib.ITEM_DOCUMENT))
+    # from code import interact; interact(local=locals())
 
 if __name__ == "__main__":
     read_epub()

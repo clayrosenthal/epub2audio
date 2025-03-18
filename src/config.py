@@ -7,7 +7,8 @@ from pathlib import Path
 from loguru import logger
 
 # Set up logging
-logger.add(sys.stderr, level="INFO")
+logger.remove(0)
+DEFAULT_LOGGER_ID = logger.add(sys.stderr, level="INFO")
 
 # Audio settings
 SAMPLE_RATE = 24000  # Hz
@@ -17,7 +18,7 @@ AUDIO_FORMAT = "ogg"
 AUDIO_CHANNELS = 1  # Mono
 
 # File handling
-DEFAULT_OUTPUT_DIR = "./audiobooks"
+DEFAULT_OUTPUT = "audiobook.ogg"
 CACHE_DIR = Path(getenv("XDG_CACHE_HOME", Path.home() / ".cache")) / "epub2audio"
 
 # Progress reporting

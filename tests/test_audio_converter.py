@@ -60,7 +60,9 @@ def test_audio_converter_init_invalid_voice(mock_tts: Mock, tmp_path: Path) -> N
 def test_get_voice(mock_tts: Mock, tmp_path: Path) -> None:
     """Test voice selection with both valid and invalid voice names."""
     test_voice = Voice.AF_HEART
-    converter = AudioConverter(epub_path=str(tmp_path / "test.epub"), voice=test_voice)
+    test_epub = tmp_path / "test.epub"
+    test_epub.touch()
+    converter = AudioConverter(epub_path=str(test_epub), voice=test_voice)
     voice = converter._get_voice(test_voice.name)
     assert voice.name == test_voice.name
 

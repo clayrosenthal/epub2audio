@@ -15,6 +15,11 @@ uv_create_args = [
     "--seed",
 ]
 
+[task_config]
+includes = [
+    "bin",
+]
+
 [tasks.format]
 description = "Format code with ruff"
 run = "uv run ruff format ."

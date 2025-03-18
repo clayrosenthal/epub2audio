@@ -8,10 +8,10 @@ from unittest.mock import Mock, patch
 import pytest
 from click.testing import CliRunner
 
-from src.config import DEFAULT_OUTPUT_DIR, ErrorCodes
+from src.config import ErrorCodes
 from src.epub2audio import main, process_epub
 from src.helpers import ConversionError
-
+from src.voice import Voice
 
 @pytest.fixture
 def cli_runner() -> CliRunner:
@@ -22,7 +22,7 @@ def cli_runner() -> CliRunner:
 @pytest.fixture
 def mock_process_epub() -> Generator[Mock, None, None]:
     """Mock the process_epub function."""
-    with patch("src.cli.process_epub") as mock:
+    with patch("src.epub2audio.process_epub") as mock:
         yield mock
 
 
@@ -30,14 +30,19 @@ def test_cli_basic(
     cli_runner: CliRunner, mock_process_epub: Mock, tmp_path: Path
 ) -> None:
     """Test basic CLI usage with default parameters."""
-    input_file = str(tmp_path / "test.epub")
-    open(input_file, "w").close()  # Create empty file
+    input_file = tmp_path / "test.epub"
+    input_file.touch()
 
-    result = cli_runner.invoke(main, [input_file])
+    result = cli_runner.invoke(main, [str(input_file)])
 
     assert result.exit_code == 0
     mock_process_epub.assert_called_once_with(
-        input_file, DEFAULT_OUTPUT_DIR, "default", 1.0, "192k", False
+        input_file, 
+        input_file.with_suffix(".ogg"),
+        voice=Voice.AF_HEART,
+        speech_rate=1.0,
+        quiet=False,
+        cache=True,
     )
 
 
@@ -46,15 +51,15 @@ def test_cli_with_options(
 ) -> None:
     """Test CLI with all options specified and verify they are passed correctly."""
     input_file = str(tmp_path / "test.epub")
-    output_dir = str(tmp_path / "output")
+    output = str(tmp_path / "output.ogg")
     open(input_file, "w").close()  # Create empty file
 
     result = cli_runner.invoke(
         main,
         [
             input_file,
-            "--output-dir",
-            output_dir,
+            "--output",
+            output,
             "--voice",
             "test_voice",
             "--rate",
@@ -67,7 +72,7 @@ def test_cli_with_options(
 
     assert result.exit_code == 0
     mock_process_epub.assert_called_once_with(
-        input_file, output_dir, "test_voice", 1.5, "256k", True
+        input_file, output, "test_voice", 1.5, "256k", True
     )
 
 
@@ -101,7 +106,7 @@ def test_process_epub_error_handling(cli_runner: CliRunner, tmp_path: Path) -> N
     open(input_file, "w").close()  # Create empty file
 
     with patch(
-        "src.cli.process_epub",
+        "src.epub2audio.process_epub",
         side_effect=ConversionError("Test error", ErrorCodes.INVALID_EPUB),
     ):
         result = cli_runner.invoke(main, [input_file])
@@ -114,7 +119,9 @@ def test_process_epub_unexpected_error(cli_runner: CliRunner, tmp_path: Path) ->
     input_file = str(tmp_path / "test.epub")
     open(input_file, "w").close()  # Create empty file
 
-    with patch("src.cli.process_epub", side_effect=Exception("Unexpected error")):
+    with patch(
+        "src.epub2audio.process_epub", side_effect=Exception("Unexpected error")
+    ):
         result = cli_runner.invoke(main, [input_file])
         assert result.exit_code == ErrorCodes.UNKNOWN_ERROR
         assert "Unexpected error" in result.output
@@ -125,8 +132,8 @@ def test_process_epub_integration(tmp_path: Path) -> None:
     """Integration test for EPUB processing with all components mocked."""
     # Create test files and directories
     input_file = str(tmp_path / "test.epub")
-    output_dir = str(tmp_path / "output")
-    os.makedirs(output_dir, exist_ok=True)
+    output = tmp_path / "output.ogg"
+    os.makedirs(output.parent, exist_ok=True)
     open(input_file, "w").close()  # Create empty file
 
     # Mock all the necessary components
@@ -146,7 +153,9 @@ def test_process_epub_integration(tmp_path: Path) -> None:
         mock_converter.return_value.generate_chapter_announcement.return_value = Mock()
 
         # Run the process
-        process_epub(input_file, output_dir, "test_voice", 1.0, "192k", False)
+        process_epub(
+            input_file, output, speech_rate=1.0, voice="test_voice", quiet=False
+        )
 
         # Verify the process flow
         mock_processor.assert_called_once()

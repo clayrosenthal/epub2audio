@@ -1,0 +1,25 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "name": "Python Debugger: cli",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/epub2audio.py",
+            "args": ["--verbose", "tests/data/sample.epub"],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python Debugger: read-epub",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/bin/read-epub",
+            "args": ["books/Alice In Wonderland.epub"],
+            "console": "integratedTerminal"
+        }
+    ]
+}

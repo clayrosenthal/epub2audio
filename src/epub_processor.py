@@ -123,8 +123,12 @@ class EpubProcessor:
         for cover in self.epub.get_items_of_type(ebooklib.ITEM_COVER):
             logger.trace(f"Cover: {cover}")
             cover_bytes = cover.get_content()
+            # TODO: if more than one cover,
+            # show the cover images to the user, or use the largest
             if cover_bytes:
                 metadata["cover_image"] = base64.b64encode(cover_bytes).decode("utf-8")
+                # just take the first cover
+                break
 
         return BookMetadata(**metadata)
 
@@ -180,28 +184,32 @@ class EpubProcessor:
                 continue
 
             # Extract title from content or use fallback
-            title = self._extract_chapter_title(item) or f"Chapter {order + 1}"
+            raw_content = item.get_content().decode("utf-8")
+            title = self._extract_chapter_title(raw_content) or f"Chapter {order + 1}"
 
             # Skip likely table of contents
             if book_title_added and title == self.metadata.title:
                 continue
 
-            content = self._clean_text(item.get_content().decode("utf-8"))
-            content = content.removeprefix(title)
+            # Add book title to the beginning of the list
+            if title == self.metadata.title:
+                chapter = Chapter(title=title, order=-1, id="title",
+                                  content=f"{self.metadata.book_sentence}")
+                chapters.append(chapter)
+                logger.trace(f"Book title added: {chapter}")
+                book_title_added = True
+                continue
+
+            content = self._clean_text(raw_content)
+            # remote the title from the content
+            content = self._remove_title_from_content(content, title)
 
             # Skip empty chapters
             if not content:
                 continue
 
             chapter = Chapter(title=title, content=content, order=order, id=item.id)
-            # Add book title to the beginning of the list
-            if title == self.metadata.title:
-                chapter.order = -1
-                chapter.content = f"{self.metadata.book_sentence}"
-                chapters.append(chapter)
-                logger.trace(f"Book title added: {chapter}")
-                book_title_added = True
-                continue
+
 
             chapters.append(chapter)
             order += 1
@@ -232,23 +240,29 @@ class EpubProcessor:
         """
         # Skip common non-chapter files
         skip_patterns = [r"toc\.x?html$", r"copyright\.x?html$", r"cover\.x?html$"]
+        skip_id_patterns = [r"pg-(header|footer|toc)$"]
 
         for pattern in skip_patterns:
             if re.search(pattern, item.file_name.lower()):
                 return False
 
+        for pattern in skip_id_patterns:
+            if re.search(pattern, item.id.lower()):
+                return False
+
         return True
 
-    def _extract_chapter_title(self, item: epub.EpubItem) -> Optional[str]:
+    @staticmethod
+    def _extract_chapter_title(raw_content: str) -> Optional[str]:
         """Extract chapter title from an EPUB item.
 
         Args:
-            item: EPUB item to extract title from
+            raw_content: Raw string of html content to extract title from
 
         Returns:
             Optional[str]: Extracted title or None
         """
-        soup = BeautifulSoup(item.get_content().decode("utf-8"), "html.parser")
+        soup = BeautifulSoup(raw_content, "html.parser")
 
         # Try to find title in common heading elements
         for heading in soup.find_all(["h1", "h2", "h3"]):
@@ -257,3 +271,24 @@ class EpubProcessor:
                 return title
 
         return None
+
+    @staticmethod
+    def _remove_title_from_content(content: str, title: str) -> str:
+        """Remove the title from the content.
+
+        Args:
+            content: Content to remove title from
+            title: Title to remove
+
+        Returns:
+            str: Content with title removed
+        """
+        title_split = title.split()
+        content_split = content[:len(title)].split()
+        rest_of_content = content[len(title):]
+        while title_split and content_split and title_split[0] == content_split[0]:
+            title_split.pop(0)
+            content_split.pop(0)
+        content_split.append(rest_of_content)
+        content = " ".join(content_split)
+        return content

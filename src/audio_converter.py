@@ -9,7 +9,6 @@ import numpy as np
 from kokoro import KModel, KPipeline  # Maybe I'll implement TextToSpeech, Voice
 from loguru import logger
 from soundfile import SoundFile
-from tqdm import tqdm  # type: ignore
 
 from .config import (
     KOKORO_PATHS,
@@ -33,7 +32,6 @@ class AudioConverter:
         voice: str | Voice = Voice.AF_HEART,
         speech_rate: float = 1.0,
         cache: bool = True,
-        quiet: bool = True,
     ):
         """Initialize the audio converter.
 
@@ -42,6 +40,7 @@ class AudioConverter:
             voice: Voice to use
             speech_rate: Speech rate multiplier
             cache: Whether to cache the generated audio
+            quiet: Whether to suppress progress reporting
 
         Raises:
             ConversionError: If the voice is invalid or TTS initialization fails
@@ -64,7 +63,6 @@ class AudioConverter:
             self.speech_rate = speech_rate
             self.cache_dir_manager = CacheDirManager(epub_path)
             self.cache = cache
-            self.quiet = quiet
         except Exception as e:
             raise ConversionError(
                 f"Failed to initialize TextToSpeech: {str(e)}", ErrorCodes.INVALID_VOICE
@@ -161,38 +159,3 @@ class AudioConverter:
             raise ConversionError(
                 f"Failed to convert text to speech: {str(e)}", ErrorCodes.UNKNOWN_ERROR
             ) from e
-
-    def concatenate_segments(self, segments: list[SoundFile]) -> SoundFile:
-        """Concatenate multiple audio segments.
-
-        Args:
-            segments: List of audio segments to concatenate
-
-        Returns:
-            SoundFile: Concatenated audio
-        """
-        if not segments:
-            raise ValueError("No audio segments to concatenate")
-
-        # Ensure all segments have the same sample rate
-        sample_rate = segments[0].samplerate
-        if not all(s.samplerate == sample_rate for s in segments):
-            raise ValueError("All audio segments must have the same sample rate")
-
-        # Concatenate the audio data
-        temp_file = self.cache_dir_manager.get_file("concatenated")
-        concatenated_data = SoundFile(
-            temp_file, mode="w", samplerate=sample_rate, channels=1
-        )
-        with tqdm(
-            total=sum(len(segment.frames) for segment in segments),
-            desc="Concatenating audio segments",
-            disable=self.quiet,
-        ) as pbar:
-            for segment in segments:
-                with SoundFile(segment.name, mode="r") as sf:
-                    data = sf.read()
-                concatenated_data.write(data)
-                pbar.update(len(data))
-        concatenated_data.close()
-        return concatenated_data

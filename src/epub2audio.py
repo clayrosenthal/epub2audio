@@ -1,17 +1,21 @@
 """Command-line interface for EPUB to audiobook conversion."""
 
+import re
 import sys
 import time
 from pathlib import Path
 from typing import Union
 
 import click
+import roman
+from loguru import logger
 from soundfile import SoundFile  # type: ignore
 from tqdm import tqdm  # type: ignore
 
 from .audio_converter import AudioConverter
 from .audio_handler import AudioHandler
 from .config import (
+    DEFAULT_LOGGER_ID,
     DEFAULT_SPEECH_RATE,
     ErrorCodes,
 )
@@ -25,9 +29,10 @@ from .helpers import (
     ensure_dir_exists,
     format_duration,
     get_duration,
-    logger,
+    ROMAN_REGEX,
 )
 from .voices import Voice
+
 
 
 class Epub2Audio:
@@ -64,9 +69,10 @@ class Epub2Audio:
         self.max_chapters = max_chapters
         self._parse_epub()
         # Create output filename
-        if not output_path:
-            output_filename = clean_filename(f"{self.metadata.title}.ogg")
-            self.output_path = Path(".") / output_filename
+        if not output_path and self.metadata.title:
+            self.output_path = Path(clean_filename(f"{self.metadata.title}.ogg"))
+        elif not output_path:
+            self.output_path = Path(epub_path).with_suffix(".ogg")
         elif Path(output_path).suffix != ".ogg":
             self.output_path = Path(output_path).with_suffix(".ogg")
         else:
@@ -82,9 +88,13 @@ class Epub2Audio:
             voice=self.voice,
             speech_rate=self.speech_rate,
             cache=self.cache,
-            quiet=self.quiet,
         )
-        self.audio_handler = AudioHandler(self.output_path, self.metadata)
+        self.audio_handler = AudioHandler(
+            self.epub_path,
+            self.output_path,
+            self.metadata,
+            self.quiet,
+        )
 
         # Estimate required disk space (rough estimate: 1MB per minute of audio)
         estimated_space = get_book_length(self.chapters) * 100  # Very rough estimate
@@ -106,10 +116,30 @@ class Epub2Audio:
             logger.info(f"Processing EPUB file: {self.epub_path}")
 
         # Process EPUB
-        self.epub = EpubProcessor(str(self.epub_path))
+        self.epub = EpubProcessor(self.epub_path)
         self.metadata = self.epub.metadata
         self.chapters = self.epub.chapters
         self.warnings = self.epub.warnings
+        uses_roman_numerals = True
+        for chapter in self.chapters[1:]:
+            if not re.search(r"^chapter\s+[ivxclm]+\s", chapter.title.lower()):
+                uses_roman_numerals = False
+                break
+
+        if uses_roman_numerals:
+            logger.debug("Using roman numerals for chapter markers")
+            self._roman_to_arabic()
+
+    def _roman_to_arabic(self) -> None:
+        """Convert roman numerals to arabic numerals."""
+        for chapter in self.chapters:
+            chapter_number = ROMAN_REGEX.search(chapter.title)
+            if chapter_number:
+                chapter_number = roman.fromRoman(chapter_number.group("number"))
+                chapter.title = re.sub(
+                    ROMAN_REGEX, f"Chapter {chapter_number} ", chapter.title
+                )
+
 
     def _process_epub_chapter(self, chapter: Chapter) -> None:
         if self.max_chapters > 0 and len(self.chapters) > self.max_chapters:
@@ -145,7 +175,7 @@ class Epub2Audio:
 
         Args:
             epub_path: Path to the EPUB file
-            output_path: Path to the output OGG file
+            output_path: Path to the output  OGG file
             voice: Name of the voice to use
             speech_rate: Speech rate multiplier
             bitrate: Output audio bitrate
@@ -171,8 +201,7 @@ class Epub2Audio:
         if not self.quiet:
             logger.info("Finalizing audio file...")
 
-        final_audio = self.converter.concatenate_segments(self.audio_segments)
-        self.audio_handler.finalize_audio_file(final_audio)
+        self.audio_handler.finalize_audio_file(self.audio_segments)
 
         # Clean up cache files
         if not self.cache:
@@ -289,9 +318,9 @@ def main(
     INPUT_EPUB is the path to the EPUB file to convert.
     """
     if quiet:
-        logger.remove()
+        logger.remove(DEFAULT_LOGGER_ID)
     elif verbose:
-        logger.remove()
+        logger.remove(DEFAULT_LOGGER_ID)
         if verbose > 1:
             logger.add(sys.stderr, level="DEBUG")
         elif verbose > 2:

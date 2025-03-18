@@ -1,6 +1,7 @@
 """Utility functions and error handling for the EPUB to Audiobook converter."""
 
 import os
+import re
 import shutil
 from dataclasses import dataclass
 from hashlib import sha256
@@ -14,6 +15,8 @@ from tqdm import tqdm  # type: ignore
 from .config import CACHE_DIR, ErrorCodes
 
 StrPath = Union[str, Path]
+
+ROMAN_REGEX = re.compile(r"^[C|c]hapter\s+(?P<number>[ivxclm]+)\s")
 
 
 @dataclass

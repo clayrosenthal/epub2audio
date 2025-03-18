@@ -6,10 +6,11 @@ from shutil import move
 from loguru import logger
 from mutagen.oggvorbis import OggVorbis
 from soundfile import SoundFile
+from tqdm import tqdm  # type: ignore
 
 from .config import ErrorCodes
 from .epub_processor import BookMetadata
-from .helpers import AudioHandlerError, StrPath, format_time
+from .helpers import AudioHandlerError, StrPath, format_time, CacheDirManager
 
 
 @dataclass
@@ -39,17 +40,21 @@ class ChapterMarker:
 class AudioHandler:
     """Class for handling audio file creation and metadata."""
 
-    def __init__(self, output_path: StrPath, metadata: BookMetadata):
+    def __init__(self, epub_path: StrPath, output_path: StrPath, metadata: BookMetadata, quiet: bool = True):
         """Initialize the audio handler.
 
         Args:
+            epub_path: Path to the EPUB file
             output_path: Path to the output audio file
             metadata: Book metadata
+            quiet: Whether to suppress progress bars
         """
+        self.epub_path = epub_path
         self.output_path = output_path
         self.metadata = metadata
+        self.cache_dir_manager = CacheDirManager(epub_path)
         self.chapter_markers: list[ChapterMarker] = []
-
+        self.quiet = quiet
     def add_chapter_marker(
         self, title: str, start_time: float, end_time: float
     ) -> None:
@@ -90,21 +95,58 @@ class AudioHandler:
         audio_file["PERFORMER"] = "Kokoro TextToSpeech"
         audio_file["COPYRIGHT"] = "https://creativecommons.org/licenses/by-sa/4.0/"
 
-
         # Add chapter markers
         for i, marker in enumerate(self.chapter_markers):
             audio_file[f"CHAPTER{i:03d}NAME"] = marker.title
             audio_file[f"CHAPTER{i:03d}"] = marker.start_time_str
 
-    def finalize_audio_file(self, final_segment: SoundFile) -> None:
+
+    def _concatenate_segments(self, segments: list[SoundFile]) -> SoundFile:
+        """Concatenate multiple audio segments.
+
+        Args:
+            segments: List of audio segments to concatenate
+
+        Returns:
+            SoundFile: Concatenated audio
+        """
+        if not segments:
+            raise ValueError("No audio segments to concatenate")
+
+        # Ensure all segments have the same sample rate
+        sample_rate = segments[0].samplerate
+        if not all(s.samplerate == sample_rate for s in segments):
+            raise ValueError("All audio segments must have the same sample rate")
+
+        # Concatenate the audio data
+        temp_file = self.cache_dir_manager.get_file("concatenated")
+        concatenated_data = SoundFile(
+            temp_file, mode="w", samplerate=sample_rate, channels=1
+        )
+        with tqdm(
+            total=sum(segment.frames for segment in segments),
+            desc="Concatenating audio segments",
+            disable=self.quiet,
+        ) as pbar:
+            for segment in segments:
+                with SoundFile(segment.name, mode="r") as sf:
+                    data = sf.read()
+                concatenated_data.write(data)
+                pbar.update(len(data))
+        concatenated_data.close()
+        return concatenated_data
+
+
+    def finalize_audio_file(self, segments: list[SoundFile]) -> None:
         """Write the final audio file with metadata.
 
         Args:
-            final_segment: The final concatenated audio segment
+            segments: List of audio segments to concatenate and write to the final file
 
         Raises:
             AudioHandlerError: If writing the audio file fails
         """
+        final_segment = self._concatenate_segments(segments)
         try:
             # Add metadata
             logger.trace(f"Adding metadata to final audio file, {final_segment.name}")
