@@ -199,6 +199,7 @@ class Epub2Audio:
             total=get_book_length(self.chapters),
             desc="Converting chapters",
             disable=self.quiet,
+            unit="chars",
         ) as pbar:
             for chapter in self.chapters:
                 self._process_epub_chapter(chapter)
@@ -306,7 +307,7 @@ def process_epub(
     type=str,
     default="flac",
     help="Format to use for the output file.",
-    show_choices=["flac", "ogg"] #TODO: add mp3 support  "mp3"],
+    show_choices=["flac", "ogg", "mp3"],
 )
 @click.option("--quiet", "-q", is_flag=True, help="Suppress progress reporting.")
 @click.option("--cache", "-c", is_flag=True, help="Enable caching of audio segments.")
@@ -342,8 +343,10 @@ def main(
         logger.remove(DEFAULT_LOGGER_ID)
         if verbose > 1:
             logger.add(sys.stderr, level="DEBUG")
+            logger.debug("Logging level: DEBUG")
         elif verbose > 2:
             logger.add(sys.stderr, level="TRACE")
+            logger.debug("Logging level: TRACE")
         logger.trace(f"Input EPUB: {input_epub}")
         logger.trace(f"Output path: {output}")
         logger.trace(f"Voice: {voice}")

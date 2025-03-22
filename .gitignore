@@ -11,6 +11,9 @@ books/
 *.pyc
 __pycache__/
 src/_version.py
+.vscode/
+*.epub
+!src/tests/data/sample.epub
 
 packages/
 kokoro-weights

@@ -47,10 +47,24 @@ description = "Generate a sample epub file"
 run = "uv run bin/generate-sample-epub"
 sources = ["bin/generate-sample-epub"]
 
-[tasks.sample]
-description = "Run the project against a sample EPUB"
+[tasks.sample-flac]
+description = "Create a sample FLAC audiobook"
 run = "uv run epub2audio '{{ config_root }}/tests/data/sample.epub' --output '{{ config_root }}/audiobooks/Sample_Book.flac'"
 depends = ["gen-sample"]
+
+[tasks.sample-mp3]
+description = "Create a sample MP3 audiobook"
+run = "uv run epub2audio '{{ config_root }}/tests/data/sample.epub' --output '{{ config_root }}/audiobooks/Sample_Book.mp3'"
+depends = ["gen-sample"]
+
+[tasks.sample-ogg]
+description = "Create a sample OGG audiobook"
+run = "uv run epub2audio '{{ config_root }}/tests/data/sample.epub' --output '{{ config_root }}/audiobooks/Sample_Book.ogg'"
+depends = ["gen-sample"]
+
+[tasks.sample-all]
+description = "Create all sample audiobooks"
+depends = ["sample-flac", "sample-mp3", "sample-ogg"]
 
 [tasks.play]
 description = "Play the sample audiobook"

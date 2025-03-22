@@ -14,6 +14,7 @@ from .config import (
     KOKORO_PATHS,
     SAMPLE_RATE,
     ErrorCodes,
+    SUPPORTED_AUDIO_FORMATS,
 )
 from .helpers import (
     CacheDirManager,
@@ -22,11 +23,6 @@ from .helpers import (
 )
 from .voices import Voice
 
-SUPPORTED_AUDIO_FORMATS = {
-    ".flac": ("FLAC", "PCM_16"),
-    ".ogg": ("OGG", "VORBIS"),
-    # ".mp3": ("MP3", "MP3"),
-}
 
 class AudioConverter:
     """Class for converting text to speech using Kokoro."""
@@ -37,7 +33,7 @@ class AudioConverter:
         voice: str | Voice = Voice.AF_HEART,
         speech_rate: float = 1.0,
         cache: bool = True,
-        extension: str = "flac",
+        extension: str = ".flac",
     ):
         """Initialize the audio converter.
 
@@ -70,7 +66,7 @@ class AudioConverter:
             self.cache_dir_manager = CacheDirManager(epub_path, extension=extension)
             self.cache = cache
             self.extension = extension
-            self.format, self.subtype = SUPPORTED_AUDIO_FORMATS[extension]
+            self.format, self.subtype, _ = SUPPORTED_AUDIO_FORMATS[extension]
         except Exception as e:
             raise ConversionError(
                 f"Failed to initialize TextToSpeech: {str(e)}", ErrorCodes.INVALID_VOICE

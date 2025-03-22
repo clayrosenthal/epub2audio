@@ -8,14 +8,19 @@ from shutil import move
 
 from loguru import logger
 from PIL import Image
+import mutagen
 from mutagen.flac import Picture, FLAC
-from mutagen.id3 import PictureType
+from mutagen.id3 import (
+    PictureType, ID3, CTOC, TIT2, TPE1, TDRC, COMM, CHAP, CTOCFlags,
+    TOR, TPUB, TPE2, TCOP
+)
 from mutagen.oggflac import OggFLAC
-from mutagen.oggvorbis import OggVorbis
+from mutagen.oggopus import OggOpus
+from mutagen.mp3 import MP3
 from soundfile import SoundFile
 from tqdm import tqdm  # type: ignore
 
-from .config import ErrorCodes
+from .config import ErrorCodes, SUPPORTED_AUDIO_FORMATS
 from .epub_processor import BookMetadata
 from .helpers import AudioHandlerError, StrPath, format_time, CacheDirManager
 
@@ -63,6 +68,7 @@ class AudioHandler:
         self.cache_dir_manager = CacheDirManager(epub_path, extension=self.extension)
         self.chapter_markers: list[ChapterMarker] = []
         self.quiet = quiet
+
     def add_chapter_marker(
         self, title: str, start_time: float, end_time: float
     ) -> None:
@@ -118,11 +124,70 @@ class AudioHandler:
             file_b64_str,
         ]
 
-    def _write_metadata(self, audio_file: OggVorbis | OggFLAC | FLAC) -> None:
+    def _write_mp3_metadata(self, audio_file: MP3) -> None:
         """Write metadata to the audio file.
 
         Args:
-            audio_file: OggVorbis | OggFLAC | FLAC file object
+            audio_file: MP3 file object
+        """
+        # Create ID3 tag if it doesn't exist
+        if audio_file.tags is None:
+            audio_file.add_tags()
+            assert audio_file.tags is not None
+
+        # Add basic metadata
+        audio_file.tags.add(TIT2(encoding=3, text=[self.metadata.title]))
+        if self.metadata.creator:
+            audio_file.tags.add(TPE1(encoding=3, text=[self.metadata.creator]))
+        if self.metadata.date:
+            audio_file.tags.add(TDRC(encoding=3, text=[self.metadata.date]))
+        if self.metadata.publisher:
+            audio_file.tags.add(TPUB(encoding=3, text=[self.metadata.publisher]))
+        if self.metadata.description:
+            audio_file.tags.add(COMM(encoding=3, text=[self.metadata.description]))
+
+        # Add chapter markers
+        if self.chapter_markers:
+            logger.debug(f"Adding chapter markers to {self.output_path}")
+            # Create chapter IDs
+            chapter_ids = [f"chp{i:03d}" for i in range(len(self.chapter_markers))]
+
+            # Create CTOC (Table of Contents)
+            audio_file.tags.add(
+                CTOC(
+                    element_id="toc",
+                    flags=CTOCFlags.TOP_LEVEL | CTOCFlags.ORDERED,
+                    child_element_ids=chapter_ids,
+                    sub_frames=[TIT2(encoding=3, text=["Table of Contents"])]
+                )
+            )
+
+            # Add individual chapters
+            for i, marker in enumerate(self.chapter_markers):
+                # Convert times to milliseconds
+                start_time = int(marker.start_time * 1000)
+                end_time = int(marker.end_time * 1000)
+                logger.trace(f"Adding chapter '{marker.title}' at {start_time}ms")
+                audio_file.tags.add(
+                    CHAP(
+                        element_id=chapter_ids[i],
+                        start_time=start_time,
+                        end_time=end_time,
+                        sub_frames=[TIT2(encoding=3, text=[marker.title])]
+                    )
+                )
+
+        # Add organization info
+        audio_file.tags.add(TOR(encoding=3, text=["epub2audio"]))
+        audio_file.tags.add(TPE2(encoding=3, text=["Kokoro TextToSpeech"]))
+        audio_file.tags.add(TCOP(encoding=3, text=["https://creativecommons.org/licenses/by-sa/4.0/"]))
+
+
+    def _write_vorbis_metadata(self, audio_file: OggOpus | OggFLAC | FLAC) -> None:
+        """Write metadata to the audio file.
+
+        Args:
+            audio_file: mutagen.FileType file object that uses Vorbis Comments
         """
         # Add basic metadata
         audio_file["TITLE"] = self.metadata.title
@@ -152,6 +217,23 @@ class AudioHandler:
             audio_file[f"CHAPTER{i:03d}NAME"] = marker.title
             audio_file[f"CHAPTER{i:03d}"] = marker.start_time_str
 
+    def _write_metadata(self, audio_file: mutagen.FileType) -> None:
+        """Write metadata to the audio file.
+
+        Args:
+            audio_file: mutagen.FileType file object to write metadata to
+        """
+        if isinstance(audio_file, OggOpus):
+            self._write_vorbis_metadata(audio_file)
+        elif isinstance(audio_file, OggFLAC):
+            self._write_vorbis_metadata(audio_file)
+        elif isinstance(audio_file, FLAC):
+            self._write_vorbis_metadata(audio_file)
+        elif isinstance(audio_file, MP3):
+            self._write_mp3_metadata(audio_file)
+        else:
+            raise ValueError(f"Unsupported audio file type: {type(audio_file)}")
+
 
     def _concatenate_segments(self, segments: list[SoundFile]) -> SoundFile:
         """Concatenate multiple audio segments.
@@ -172,13 +254,20 @@ class AudioHandler:
 
         # Concatenate the audio data
         temp_file = self.cache_dir_manager.get_file("concatenated")
+        format_info = SUPPORTED_AUDIO_FORMATS[self.extension]
         concatenated_data = SoundFile(
-            temp_file, mode="w", samplerate=sample_rate, channels=1
+            temp_file, 
+            mode="w", 
+            samplerate=sample_rate, 
+            channels=1,
+            format=format_info.format,
+            subtype=format_info.subtype
         )
         with tqdm(
             total=sum(segment.frames for segment in segments),
             desc="Concatenating audio segments",
             disable=self.quiet,
+            unit="frames",
         ) as pbar:
             for segment in segments:
                 with SoundFile(segment.name, mode="r") as sf:
@@ -186,7 +275,7 @@ class AudioHandler:
                 concatenated_data.write(data)
                 pbar.update(len(data))
         concatenated_data.close()
-        return concatenated_data
+        return SoundFile(concatenated_data.name)
 
 
     def finalize_audio_file(self, segments: list[SoundFile]) -> None:
@@ -202,8 +291,9 @@ class AudioHandler:
         try:
             # Add metadata
             logger.trace(f"Adding metadata to final audio file, {final_segment.name}")
-            # audio_file = OggVorbis(final_segment.name)
-            audio_file = FLAC(final_segment.name)
+            final_segment.close()
+            audio_file_class = SUPPORTED_AUDIO_FORMATS[self.extension].file_class
+            audio_file = audio_file_class(final_segment.name)
             self._write_metadata(audio_file)
             logger.trace(f"Saving final audio file {audio_file.pprint()}")
             audio_file.save()

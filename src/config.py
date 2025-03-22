@@ -3,8 +3,15 @@
 import sys
 from os import getenv
 from pathlib import Path
+from collections import namedtuple
 
 from loguru import logger
+import mutagen
+from mutagen.flac import Picture, FLAC
+from mutagen.id3 import PictureType, ID3, CTOC
+from mutagen.oggflac import OggFLAC
+from mutagen.oggopus import OggOpus
+from mutagen.mp3 import MP3
 
 # Set up logging
 try:
@@ -69,3 +76,11 @@ METADATA_FIELDS = [
     "publisher",
     "description",
 ]
+
+AudioFormat = namedtuple("AudioFormat", ["format", "subtype", "file_class"])
+
+SUPPORTED_AUDIO_FORMATS = {
+    ".flac": AudioFormat("FLAC", "PCM_16", FLAC),
+    ".ogg": AudioFormat("OGG", "OPUS", OggOpus),
+    ".mp3": AudioFormat("MP3", "MPEG_LAYER_III", MP3),
+}
