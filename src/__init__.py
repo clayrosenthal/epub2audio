@@ -6,8 +6,8 @@ from .config import ErrorCodes, WarningTypes
 from .epub2audio import main, process_epub
 from .epub_processor import BookMetadata, Chapter, EpubProcessor
 from .helpers import ConversionError, ConversionWarning
+from ._version import __version__, version
 
-__version__ = "0.1.0"
 __author__ = "Clay Rosenthal"
 __email__ = "epub2audio@mail.clayrosenthal.me"
 
@@ -23,4 +23,6 @@ __all__ = [
     "AudioHandler",
     "ConversionError",
     "ConversionWarning",
+    "__version__",
+    "version",
 ]

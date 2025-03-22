@@ -22,6 +22,11 @@ from .helpers import (
 )
 from .voices import Voice
 
+SUPPORTED_AUDIO_FORMATS = {
+    ".flac": ("FLAC", "PCM_16"),
+    ".ogg": ("OGG", "VORBIS"),
+    # ".mp3": ("MP3", "MP3"),
+}
 
 class AudioConverter:
     """Class for converting text to speech using Kokoro."""
@@ -32,6 +37,7 @@ class AudioConverter:
         voice: str | Voice = Voice.AF_HEART,
         speech_rate: float = 1.0,
         cache: bool = True,
+        extension: str = "flac",
     ):
         """Initialize the audio converter.
 
@@ -40,7 +46,7 @@ class AudioConverter:
             voice: Voice to use
             speech_rate: Speech rate multiplier
             cache: Whether to cache the generated audio
-            quiet: Whether to suppress progress reporting
+            extension: Extension to use for the output file
 
         Raises:
             ConversionError: If the voice is invalid or TTS initialization fails
@@ -61,8 +67,10 @@ class AudioConverter:
                 model=model,
             )
             self.speech_rate = speech_rate
-            self.cache_dir_manager = CacheDirManager(epub_path)
+            self.cache_dir_manager = CacheDirManager(epub_path, extension=extension)
             self.cache = cache
+            self.extension = extension
+            self.format, self.subtype = SUPPORTED_AUDIO_FORMATS[extension]
         except Exception as e:
             raise ConversionError(
                 f"Failed to initialize TextToSpeech: {str(e)}", ErrorCodes.INVALID_VOICE
@@ -137,9 +145,11 @@ class AudioConverter:
                 mode="w",
                 samplerate=SAMPLE_RATE,
                 channels=1,
-                format="OGG",
-                subtype="VORBIS",
+                format=self.format,
+                subtype=self.subtype,
             )
+            int_size = np.int16
+            max_int_size = np.iinfo(int_size).max
             # Generate speech
             for result in self._audio_data_generator(text):
                 phonemes = result.phonemes
@@ -147,7 +157,7 @@ class AudioConverter:
                 logger.trace(f"Phonemes: {phonemes}")
                 if audio is None:
                     continue
-                audio_bytes = (audio.numpy() * 32767).astype(np.int16)
+                audio_bytes = (audio.numpy() * max_int_size).astype(int_size)
                 audio_data.write(audio_bytes)
 
             # Close the audio data, and rename the file to the final file

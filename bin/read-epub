@@ -37,6 +37,10 @@ def read_epub(path: Path) -> epub.EpubBook:
     """
     # from pdb import set_trace; set_trace()
     epub_processor = EpubProcessor(path)
+
+    print(epub_processor.book)
+    # for chapter in epub_processor.book.chapters:
+    #     print(chapter)
     # Read a new EPUB book
     # book = epub.read_epub(path)
 

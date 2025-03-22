@@ -7,7 +7,10 @@ from pathlib import Path
 from loguru import logger
 
 # Set up logging
-logger.remove(0)
+try:
+    logger.remove(0)
+except Exception:
+    pass
 DEFAULT_LOGGER_ID = logger.add(sys.stderr, level="INFO")
 
 # Audio settings

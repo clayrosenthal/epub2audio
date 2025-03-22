@@ -6,7 +6,7 @@
 # ///
 #MISE alias="generate-sample-epub"
 #MISE description="Generate a sample EPUB file"
-#MISE sources=["generate_sample.py"]
+#MISE sources=["generate-sample-epub", "tests/data/cover.jpg"]
 #MISE outputs=["tests/data/sample.epub"]
 """Generate a sample EPUB file for testing."""
 
@@ -16,6 +16,10 @@ from ebooklib import epub
 
 # Create a new EPUB book
 book = epub.EpubBook()
+
+# Add cover
+with open("tests/data/cover.jpg", "rb") as f:
+    book.set_cover("cover.jpg", f.read())
 
 # Set metadata
 book.set_identifier("id123")
@@ -48,8 +52,8 @@ book.add_item(c2)
 
 # Create table of contents
 book.toc = (
-    epub.Link(c1.file_name, c1.title, "chapter1"),
-    epub.Link(c2.file_name, c2.title, "chapter2"),
+    c1,
+    c2,
 )
 
 # Add navigation files
@@ -57,7 +61,7 @@ book.add_item(epub.EpubNcx())
 book.add_item(epub.EpubNav())
 
 # Create spine
-book.spine = ["nav", c1, c2]
+book.spine = ["cover", "nav", c1, c2]
 
 # from code import interact;s interact(local=locals())
 

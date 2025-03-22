@@ -49,7 +49,7 @@ sources = ["bin/generate-sample-epub"]
 
 [tasks.sample]
 description = "Run the project against a sample EPUB"
-run = "uv run epub2audio '{{ config_root }}/tests/data/sample.epub' --output '{{ config_root }}/audiobooks/Sample_Book.ogg'"
+run = "uv run epub2audio '{{ config_root }}/tests/data/sample.epub' --output '{{ config_root }}/audiobooks/Sample_Book.flac'"
 depends = ["gen-sample"]
 
 [tasks.play]

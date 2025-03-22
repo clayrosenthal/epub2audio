@@ -64,7 +64,7 @@ class CacheDirManager:
 
     _cache_dirs: ClassVar[dict[str, Path]] = {}
 
-    def __init__(self, epub_path: StrPath):
+    def __init__(self, epub_path: StrPath, extension: str = ".flac"):
         """Initialize the temp directory manager for an EPUB file.
 
         Args:
@@ -75,6 +75,7 @@ class CacheDirManager:
             self.epub_hash = sha256(f_bytes).hexdigest()
         self.epub_path = epub_path
         self._ensure_cache_dir()
+        self.extension = extension
 
     def _ensure_cache_dir(self) -> None:
         """Ensure the cache directory exists."""
@@ -92,7 +93,7 @@ class CacheDirManager:
         """
         return str(self._cache_dirs[self.epub_hash])
 
-    def get_file(self, data: str, suffix: str = ".ogg") -> str:
+    def get_file(self, data: str) -> str:
         """Get a temporary file name.
 
         Args:
@@ -103,7 +104,7 @@ class CacheDirManager:
             str: Temporary file name
         """
         hash = sha256(data.encode()).hexdigest()
-        return f"{self.cache_dir}/{hash}{suffix}"
+        return f"{self.cache_dir}/{hash}{self.extension}"
 
     def cleanup(self) -> None:
         """Clean up the temporary directory."""

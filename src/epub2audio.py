@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Command-line interface for EPUB to audiobook conversion."""
 
 import re
@@ -12,15 +13,15 @@ from loguru import logger
 from soundfile import SoundFile  # type: ignore
 from tqdm import tqdm  # type: ignore
 
-from .audio_converter import AudioConverter
-from .audio_handler import AudioHandler
-from .config import (
+from src.audio_converter import AudioConverter
+from src.audio_handler import AudioHandler
+from src.config import (
     DEFAULT_LOGGER_ID,
     DEFAULT_SPEECH_RATE,
     ErrorCodes,
 )
-from .epub_processor import Chapter, EpubProcessor, get_book_length
-from .helpers import (
+from src.epub_processor import Chapter, EpubProcessor, get_book_length
+from src.helpers import (
     AudioHandlerError,
     ConversionError,
     StrPath,
@@ -31,7 +32,7 @@ from .helpers import (
     get_duration,
     ROMAN_REGEX,
 )
-from .voices import Voice
+from src.voices import Voice
 
 
 
@@ -48,18 +49,20 @@ class Epub2Audio:
         cache: bool = True,
         convert: bool = True,
         max_chapters: int = -1,
+        format: str = "flac",
     ):
         """Creates an AudioBook from an Epub.
 
         Args:
             epub_path: Path to the EPUB file
-            output_path: Path to the output OGG file
+            output_path: Path to the output audio file
             voice: Name of the voice to use
             speech_rate: Speech rate multiplier
             quiet: Whether to suppress progress reporting
             cache: Whether to enable caching of audio segments
             convert: Whether to convert the epub immediately
             max_chapters: Maximum number of chapters to process, or -1 for no limit.
+            format: Format to use for the output file.
         """
         self.cache = cache
         self.quiet = quiet
@@ -67,14 +70,17 @@ class Epub2Audio:
         self.voice = voice
         self.speech_rate = speech_rate
         self.max_chapters = max_chapters
+        self.extension = f".{format}"
+        if output_path and Path(output_path).suffix != self.extension:
+            raise ValueError(f"Output path must have the extension {self.extension}")
         self._parse_epub()
         # Create output filename
         if not output_path and self.metadata.title:
-            self.output_path = Path(clean_filename(f"{self.metadata.title}.ogg"))
+            self.output_path = Path(clean_filename(f"{self.metadata.title}{self.extension}"))
         elif not output_path:
-            self.output_path = Path(epub_path).with_suffix(".ogg")
-        elif Path(output_path).suffix != ".ogg":
-            self.output_path = Path(output_path).with_suffix(".ogg")
+            self.output_path = Path(epub_path).with_suffix(self.extension)
+        elif Path(output_path).suffix != self.extension:
+            self.output_path = Path(output_path).with_suffix(self.extension)
         else:
             self.output_path = Path(output_path)
 
@@ -88,6 +94,7 @@ class Epub2Audio:
             voice=self.voice,
             speech_rate=self.speech_rate,
             cache=self.cache,
+            extension=self.extension,
         )
         self.audio_handler = AudioHandler(
             self.epub_path,
@@ -236,6 +243,7 @@ def process_epub(
     cache: bool = True,
     convert: bool = True,
     max_chapters: int = -1,
+    format: str = "flac",
 ) -> Epub2Audio:
     """Process an EPUB file and convert it to an audiobook.
 
@@ -248,6 +256,7 @@ def process_epub(
         cache: Whether to enable caching of audio segments
         convert: Whether to convert the epub immediately
         max_chapters: Maximum number of chapters to process, or -1 for no limit.
+        format: Format to use for the output file.
     """
     return Epub2Audio(
         input_epub,
@@ -258,6 +267,7 @@ def process_epub(
         cache=cache,
         convert=convert,
         max_chapters=max_chapters,
+        format=format,
     )
 
 
@@ -290,6 +300,14 @@ def process_epub(
     default=DEFAULT_SPEECH_RATE,
     help="Speech rate multiplier.",
 )
+@click.option(
+    "--format",
+    "-f",
+    type=str,
+    default="flac",
+    help="Format to use for the output file.",
+    show_choices=["flac", "ogg"] #TODO: add mp3 support  "mp3"],
+)
 @click.option("--quiet", "-q", is_flag=True, help="Suppress progress reporting.")
 @click.option("--cache", "-c", is_flag=True, help="Enable caching of audio segments.")
 @click.option("--verbose", "-v", help="Enable verbose mode.", count=True)
@@ -312,8 +330,9 @@ def main(
     verbose: int,
     convert: bool = True,
     max_chapters: int = -1,
+    format: str = "flac",
 ) -> None:
-    """Convert an EPUB ebook to an OGG audiobook.
+    """Convert an EPUB ebook to an audiobook.
 
     INPUT_EPUB is the path to the EPUB file to convert.
     """
@@ -332,6 +351,7 @@ def main(
         logger.trace(f"Quiet: {quiet}")
         logger.trace(f"Cache: {cache}")
         logger.trace(f"Convert: {convert}")
+        logger.trace(f"Format: {format}")
         logger.trace(f"Max chapters: {max_chapters}")
     try:
         process_epub(
@@ -343,6 +363,7 @@ def main(
             cache,
             convert,
             max_chapters,
+            format,
         )
     except ConversionError as e:
         logger.exception(e)

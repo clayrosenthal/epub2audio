@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+# /// script
+# dependencies = [
+#   "click>=8.1.3",
+#   "mutagen>=1.46.0",
+#   "soundfile>=0.12.1",
+#   "pillow=10.0.0",
+#   "epub2audio>=0.1.0",
+# ]
+# ///
+#MISE alias="read-ogg"
+#MISE description="Read an OGG file"
+"""Read an OGG file."""
+
+import base64
+import io
+from pathlib import Path
+
+import click
+import mutagen
+import soundfile
+from mutagen.oggvorbis import OggVorbis
+from mutagen.flac import Picture
+from PIL import Image
+
+from src.epub_processor import EpubProcessor
+
+
+@click.command()
+@click.argument("path", type=click.Path(exists=True), default="tests/data/sample.epub")
+def read_ogg(path: Path) -> OggVorbis:
+    """Read an OGG file carefully.
+
+    Meant to be used for debugging.
+
+    Args:
+        path: Path to the OGG file
+
+    Returns:
+        OggVorbis: The OGG file
+    """
+    # from pdb import set_trace; set_trace()
+    ogg_file = OggVorbis(path)
+
+    print(ogg_file)
+    for b64_data in ogg_file.get("metadata_block_picture", []):
+        try:
+            data = base64.b64decode(b64_data)
+        except (TypeError, ValueError):
+            continue
+
+        try:
+            picture = Picture(data)
+        except mutagen.MutagenError:
+            continue
+
+        extensions = {
+            "image/jpeg": "jpg",
+            "image/png": "png",
+            "image/gif": "gif",
+        }
+        ext = extensions.get(picture.mime, "jpg")
+
+        image = Image.open(io.BytesIO(picture.data))
+        image.show()
+
+    return ogg_file
+
+if __name__ == "__main__":
+    read_ogg()
