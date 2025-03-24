@@ -19,8 +19,8 @@ import click
 from soundfile import SoundFile
 from ebooklib import epub
 
-from src.epub_processor import EpubProcessor
-from src.audio_handler import AudioHandler
+from epub2audio.epub_processor import EpubProcessor
+from epub2audio.audio_handler import AudioHandler
 
 @click.command()
 @click.argument("epub_path", type=click.Path(exists=True))

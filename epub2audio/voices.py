@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Optional, Union
 
 from .config import KOKORO_PATHS
-from .helpers import logger
 
 # Language code mappings
 LANG_CODES = {
@@ -290,7 +289,6 @@ def available_voices() -> list[str]:
     """List available voices."""
     voices = Voice.list_voices()
     return [v.name for v in voices]
-
 
 
 # if Path(KOKORO_PATHS["voice_weights"]).exists():

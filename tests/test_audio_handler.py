@@ -3,17 +3,14 @@
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-import numpy as np
 import pytest
 from mutagen.oggopus import OggOpus
 from soundfile import SoundFile
 
-from src.audio_handler import AudioHandler
-from src.config import SUPPORTED_AUDIO_FORMATS
-from src.helpers import AudioHandlerError
-from src.config import ErrorCodes
-from src.epub_processor import BookMetadata
-from src.helpers import ConversionError
+from epub2audio.audio_handler import AudioHandler
+from epub2audio.config import ErrorCodes
+from epub2audio.epub_processor import BookMetadata
+from epub2audio.helpers import AudioHandlerError
 
 
 @pytest.fixture
@@ -84,7 +81,7 @@ def test_write_metadata(
     mock_audio_file.__setitem__ = Mock()
 
     audio_handler.add_chapter_marker("Chapter 1", 0.0, 10.0)
-    with patch.object(audio_handler, '_write_vorbis_metadata') as mock_write_vorbis:
+    with patch.object(audio_handler, "_write_vorbis_metadata") as mock_write_vorbis:
         audio_handler._write_metadata(mock_audio_file)
         mock_write_vorbis.assert_called_once_with(mock_audio_file)
 
@@ -95,33 +92,39 @@ def test_finalize_audio_file(audio_handler: AudioHandler, tmp_path: Path) -> Non
     mock_segment = Mock(spec=SoundFile)
     mock_segment.name = str(tmp_path / "test_segment.ogg")
     mock_segment.close = Mock()
-    
+
     # Create mock for concatenate_segments
-    with patch.object(audio_handler, '_concatenate_segments') as mock_concatenate:
+    with patch.object(audio_handler, "_concatenate_segments") as mock_concatenate:
         mock_concatenate.return_value = mock_segment
-        
-        with patch("src.audio_handler.SUPPORTED_AUDIO_FORMATS") as mock_formats:
+
+        with patch("epub2audio.audio_handler.SUPPORTED_AUDIO_FORMATS") as mock_formats:
             # Mock the types
-            mock_type = type('MockOggOpus', (), {})
+            mock_type = type("MockOggOpus", (), {})
             format_info_mock = Mock()
             format_info_mock.file_class = mock_type
             mock_formats.__getitem__.return_value = format_info_mock
 
             # Mock the type initialization
             mock_file_instance = Mock()
-            with patch.object(mock_type, '__new__', return_value=mock_file_instance):
+            with patch.object(mock_type, "__new__", return_value=mock_file_instance):
                 # Mock the file operations
-                with patch.object(audio_handler, '_write_metadata') as mock_write_metadata:
+                with patch.object(
+                    audio_handler, "_write_metadata"
+                ) as mock_write_metadata:
                     # Mock shutil.move to prevent file operation
-                    with patch("src.audio_handler.move") as mock_move:
+                    with patch("epub2audio.audio_handler.move") as mock_move:
                         audio_handler.finalize_audio_file([mock_segment])
 
                         # Check if metadata was written
-                        mock_formats.__getitem__.assert_called_with(audio_handler.extension)
+                        mock_formats.__getitem__.assert_called_with(
+                            audio_handler.extension
+                        )
                         mock_write_metadata.assert_called_once_with(mock_file_instance)
                         mock_file_instance.save.assert_called_once()
                         # Check file was moved
-                        mock_move.assert_called_once_with(mock_segment.name, audio_handler.output_path)
+                        mock_move.assert_called_once_with(
+                            mock_segment.name, audio_handler.output_path
+                        )
 
 
 def test_finalize_audio_file_error(audio_handler: AudioHandler, tmp_path: Path) -> None:
@@ -130,12 +133,12 @@ def test_finalize_audio_file_error(audio_handler: AudioHandler, tmp_path: Path) 
     mock_segment = Mock(spec=SoundFile)
     mock_segment.name = str(tmp_path / "test_segment.ogg")
     mock_segment.close = Mock()
-    
+
     # Create mock for concatenate_segments
-    with patch.object(audio_handler, '_concatenate_segments') as mock_concatenate:
+    with patch.object(audio_handler, "_concatenate_segments") as mock_concatenate:
         mock_concatenate.return_value = mock_segment
-        
-        with patch("src.audio_handler.SUPPORTED_AUDIO_FORMATS") as mock_formats:
+
+        with patch("epub2audio.audio_handler.SUPPORTED_AUDIO_FORMATS") as mock_formats:
             # Set up mock to raise an exception
             file_class_mock = Mock(side_effect=Exception("Save error"))
             format_info_mock = Mock()

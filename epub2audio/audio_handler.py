@@ -2,27 +2,37 @@
 
 import base64
 import io
+from dataclasses import dataclass
 from pathlib import Path
-from dataclasses import asdict, dataclass
 from shutil import move
 
-from loguru import logger
-from PIL import Image
 import mutagen
-from mutagen.flac import Picture, FLAC
+from loguru import logger
+from mutagen.flac import FLAC, Picture
 from mutagen.id3 import (
-    PictureType, ID3, CTOC, TIT2, TPE1, TDRC, COMM, CHAP, CTOCFlags,
-    TOR, TPUB, TPE2, TCOP
+    CHAP,
+    COMM,
+    CTOC,
+    TCOP,
+    TDRC,
+    TIT2,
+    TOR,
+    TPE1,
+    TPE2,
+    TPUB,
+    CTOCFlags,
+    PictureType,
 )
+from mutagen.mp3 import MP3
 from mutagen.oggflac import OggFLAC
 from mutagen.oggopus import OggOpus
-from mutagen.mp3 import MP3
+from PIL import Image
 from soundfile import SoundFile
 from tqdm import tqdm  # type: ignore
 
-from .config import ErrorCodes, SUPPORTED_AUDIO_FORMATS
+from .config import SUPPORTED_AUDIO_FORMATS, ErrorCodes
 from .epub_processor import BookMetadata
-from .helpers import AudioHandlerError, StrPath, format_time, CacheDirManager
+from .helpers import AudioHandlerError, CacheDirManager, StrPath, format_time
 
 
 @dataclass
@@ -52,7 +62,13 @@ class ChapterMarker:
 class AudioHandler:
     """Class for handling audio file creation and metadata."""
 
-    def __init__(self, epub_path: StrPath, output_path: StrPath, metadata: BookMetadata, quiet: bool = True):
+    def __init__(
+        self,
+        epub_path: StrPath,
+        output_path: StrPath,
+        metadata: BookMetadata,
+        quiet: bool = True,
+    ):
         """Initialize the audio handler.
 
         Args:
@@ -94,7 +110,7 @@ class AudioHandler:
 
         # cover_image.show()
         cover_picture = Picture()
-        cover_picture.data = cover_image_bytes # cover_image.tobytes()
+        cover_picture.data = cover_image_bytes  # cover_image.tobytes()
         if cover_image.format:
             cover_picture.mime = f"image/{cover_image.format.lower()}"
         else:
@@ -104,7 +120,7 @@ class AudioHandler:
         cover_picture.width = cover_image.width
         cover_picture.depth = 8
         cover_picture.colors = 0
-        cover_picture.desc = "Cover image" # TODO: Add description
+        cover_picture.desc = "Cover image"  # TODO: Add description
         return cover_picture
 
     def _parse_cover_image(self) -> list[str]:
@@ -158,7 +174,7 @@ class AudioHandler:
                     element_id="toc",
                     flags=CTOCFlags.TOP_LEVEL | CTOCFlags.ORDERED,
                     child_element_ids=chapter_ids,
-                    sub_frames=[TIT2(encoding=3, text=["Table of Contents"])]
+                    sub_frames=[TIT2(encoding=3, text=["Table of Contents"])],
                 )
             )
 
@@ -173,15 +189,16 @@ class AudioHandler:
                         element_id=chapter_ids[i],
                         start_time=start_time,
                         end_time=end_time,
-                        sub_frames=[TIT2(encoding=3, text=[marker.title])]
+                        sub_frames=[TIT2(encoding=3, text=[marker.title])],
                     )
                 )
 
         # Add organization info
         audio_file.tags.add(TOR(encoding=3, text=["epub2audio"]))
         audio_file.tags.add(TPE2(encoding=3, text=["Kokoro TextToSpeech"]))
-        audio_file.tags.add(TCOP(encoding=3, text=["https://creativecommons.org/licenses/by-sa/4.0/"]))
-
+        audio_file.tags.add(
+            TCOP(encoding=3, text=["https://creativecommons.org/licenses/by-sa/4.0/"])
+        )
 
     def _write_vorbis_metadata(self, audio_file: OggOpus | OggFLAC | FLAC) -> None:
         """Write metadata to the audio file.
@@ -234,7 +251,6 @@ class AudioHandler:
         else:
             raise ValueError(f"Unsupported audio file type: {type(audio_file)}")
 
-
     def _concatenate_segments(self, segments: list[SoundFile]) -> SoundFile:
         """Concatenate multiple audio segments.
 
@@ -256,12 +272,12 @@ class AudioHandler:
         temp_file = self.cache_dir_manager.get_file("concatenated")
         format_info = SUPPORTED_AUDIO_FORMATS[self.extension]
         concatenated_data = SoundFile(
-            temp_file, 
-            mode="w", 
-            samplerate=sample_rate, 
+            temp_file,
+            mode="w",
+            samplerate=sample_rate,
             channels=1,
             format=format_info.format,
-            subtype=format_info.subtype
+            subtype=format_info.subtype,
         )
         with tqdm(
             total=sum(segment.frames for segment in segments),
@@ -276,7 +292,6 @@ class AudioHandler:
                 pbar.update(len(data))
         concatenated_data.close()
         return SoundFile(concatenated_data.name)
-
 
     def finalize_audio_file(self, segments: list[SoundFile]) -> None:
         """Write the final audio file with metadata.

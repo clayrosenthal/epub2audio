@@ -1,17 +1,14 @@
 """Configuration settings for the EPUB to Audiobook converter."""
 
 import sys
+from collections import namedtuple
 from os import getenv
 from pathlib import Path
-from collections import namedtuple
 
 from loguru import logger
-import mutagen
-from mutagen.flac import Picture, FLAC
-from mutagen.id3 import PictureType, ID3, CTOC
-from mutagen.oggflac import OggFLAC
-from mutagen.oggopus import OggOpus
+from mutagen.flac import FLAC
 from mutagen.mp3 import MP3
+from mutagen.oggopus import OggOpus
 
 # Set up logging
 try:

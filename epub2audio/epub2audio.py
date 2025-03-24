@@ -13,15 +13,16 @@ from loguru import logger
 from soundfile import SoundFile  # type: ignore
 from tqdm import tqdm  # type: ignore
 
-from src.audio_converter import AudioConverter
-from src.audio_handler import AudioHandler
-from src.config import (
+from .audio_converter import AudioConverter
+from .audio_handler import AudioHandler
+from .config import (
     DEFAULT_LOGGER_ID,
     DEFAULT_SPEECH_RATE,
     ErrorCodes,
 )
-from src.epub_processor import Chapter, EpubProcessor, get_book_length
-from src.helpers import (
+from .epub_processor import Chapter, EpubProcessor, get_book_length
+from .helpers import (
+    ROMAN_REGEX,
     AudioHandlerError,
     ConversionError,
     StrPath,
@@ -30,10 +31,8 @@ from src.helpers import (
     ensure_dir_exists,
     format_time,
     get_duration,
-    ROMAN_REGEX,
 )
-from src.voices import Voice
-
+from .voices import Voice
 
 
 class Epub2Audio:
@@ -76,7 +75,9 @@ class Epub2Audio:
         self._parse_epub()
         # Create output filename
         if not output_path and self.metadata.title:
-            self.output_path = Path(clean_filename(f"{self.metadata.title}{self.extension}"))
+            self.output_path = Path(
+                clean_filename(f"{self.metadata.title}{self.extension}")
+            )
         elif not output_path:
             self.output_path = Path(epub_path).with_suffix(self.extension)
         elif Path(output_path).suffix != self.extension:
@@ -147,7 +148,6 @@ class Epub2Audio:
                     ROMAN_REGEX, f"Chapter {chapter_number} ", chapter.title
                 )
 
-
     def _process_epub_chapter(self, chapter: Chapter) -> None:
         if self.max_chapters > 0 and len(self.chapters) > self.max_chapters:
             logger.info(f"Skipping chapter {chapter.title} as max chapters reached")
@@ -162,6 +162,10 @@ class Epub2Audio:
         )
 
         # Convert chapter text
+        logger.trace(
+            f"start converting chapter '{chapter.title}' content: "
+            f"{len(chapter.content)}"
+        )
         chapter_audio = self.converter.convert_text(chapter.content)
         self.audio_segments.append(chapter_audio)
         logger.debug(
@@ -339,14 +343,14 @@ def main(
     """
     if quiet:
         logger.remove(DEFAULT_LOGGER_ID)
-    elif verbose:
+    if verbose:
         logger.remove(DEFAULT_LOGGER_ID)
-        if verbose > 1:
-            logger.add(sys.stderr, level="DEBUG")
-            logger.debug("Logging level: DEBUG")
-        elif verbose > 2:
+        if verbose >= 2:
             logger.add(sys.stderr, level="TRACE")
             logger.debug("Logging level: TRACE")
+        elif verbose >= 1:
+            logger.add(sys.stderr, level="DEBUG")
+            logger.debug("Logging level: DEBUG")
         logger.trace(f"Input EPUB: {input_epub}")
         logger.trace(f"Output path: {output}")
         logger.trace(f"Voice: {voice}")

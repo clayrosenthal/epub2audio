@@ -18,8 +18,9 @@ from pathlib import Path
 import click
 import ebooklib  # type: ignore
 from ebooklib import epub
+from loguru import logger
 
-from src.epub_processor import EpubProcessor
+from epub2audio.epub_processor import EpubProcessor
 
 
 @click.command()
@@ -35,6 +36,8 @@ def read_epub(path: Path) -> epub.EpubBook:
     Returns:
         epub.EpubBook: The EPUB book
     """
+    logger.remove()
+    logger.add(sys.stderr, level="TRACE")
     # from pdb import set_trace; set_trace()
     epub_processor = EpubProcessor(path)
 

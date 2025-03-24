@@ -13,8 +13,8 @@ from soundfile import SoundFile
 from .config import (
     KOKORO_PATHS,
     SAMPLE_RATE,
-    ErrorCodes,
     SUPPORTED_AUDIO_FORMATS,
+    ErrorCodes,
 )
 from .helpers import (
     CacheDirManager,
@@ -131,9 +131,11 @@ class AudioConverter:
 
             # If the file exists and caching is enabled, return the cached file
             if os.path.exists(temp_file) and self.cache:
+                logger.trace(f"returning cached file: {temp_file}")
                 return SoundFile(temp_file)
 
             if os.path.exists(f"{temp_file}.generating"):
+                logger.trace(f"removing generating file: {temp_file}.generating")
                 os.remove(f"{temp_file}.generating")
 
             audio_data = SoundFile(

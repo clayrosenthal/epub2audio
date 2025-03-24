@@ -1,14 +1,14 @@
 """Unit tests for EPUB processing module."""
 
 from pathlib import Path
-from unittest.mock import patch, Mock
+from unittest.mock import Mock, patch
 
 import pytest
-from ebooklib import epub
+from ebooklib import epub  # type: ignore
 
-from src.config import ErrorCodes
-from src.epub_processor import BookMetadata, Chapter, EpubProcessor
-from src.helpers import ConversionError
+from epub2audio.config import ErrorCodes
+from epub2audio.epub_processor import BookMetadata, Chapter, EpubProcessor
+from epub2audio.helpers import ConversionError
 
 
 @pytest.fixture
@@ -45,24 +45,24 @@ def sample_epub(tmp_path: Path) -> str:
     # Set unique IDs for the chapters
     c1.id = "chapter1"
     c2.id = "chapter2"
-    
+
     # Add chapters to the book
     book.add_item(c1)
     book.add_item(c2)
-    
+
     # Create table of contents
     book.toc = (
         epub.Link("chap_1.xhtml", "Chapter 1", "chapter1"),
-        epub.Link("chap_2.xhtml", "Chapter 2", "chapter2")
+        epub.Link("chap_2.xhtml", "Chapter 2", "chapter2"),
     )
-    
+
     # Add default NCX and Nav files
     book.add_item(epub.EpubNcx())
     book.add_item(epub.EpubNav())
-    
+
     # Define spine
     book.spine = ["nav", c1, c2]
-    
+
     # Save the book
     epub_path = tmp_path / "test.epub"
     epub.write_epub(str(epub_path), book)
@@ -108,13 +108,13 @@ def test_extract_chapters(sample_epub: str) -> None:
 
     assert len(chapters) == 3  # Book title + 2 chapters
     assert all(isinstance(c, Chapter) for c in chapters)
-    
+
     # First chapter should be the book title
     assert chapters[0].title == "Test Book"
     assert chapters[0].id == "title"
     assert chapters[0].order == -1
     assert "book by Test Author" in chapters[0].content
-    
+
     # Then the actual chapters
     assert chapters[1].title == "Chapter 1"
     assert "first chapter" in chapters[1].content.lower()
@@ -132,30 +132,33 @@ def test_clean_text() -> None:
             <p>Text with <b>formatting</b> and <img src="test.jpg" alt="test"/>.</p>
         </div>
     """
-    
+
     # First, create a proper mock metadata object
     mock_metadata = BookMetadata(
-        title="Test Book",
-        creator="Test Author",
-        language="en",
-        identifier="id123"
+        title="Test Book", creator="Test Author", language="en", identifier="id123"
     )
-    
+
     # Use patching to avoid actual file operations
     with patch("ebooklib.epub.read_epub") as mock_read_epub:
         # Create and configure the mock EPUB object
         mock_epub = Mock()
         mock_read_epub.return_value = mock_epub
-        
+
         # Setup EpubProcessor with method patches to avoid initialization errors
-        with patch.object(EpubProcessor, '_extract_metadata', return_value=mock_metadata):
-            with patch.object(EpubProcessor, '_extract_chapters', return_value=[
-                Chapter(title="Test", content="Test content", order=0, id="test")
-            ]):
+        with patch.object(
+            EpubProcessor, "_extract_metadata", return_value=mock_metadata
+        ):
+            with patch.object(
+                EpubProcessor,
+                "_extract_chapters",
+                return_value=[
+                    Chapter(title="Test", content="Test content", order=0, id="test")
+                ],
+            ):
                 # Now we can initialize the processor safely
                 processor = EpubProcessor("sample_path")
                 processor.warnings = []
-                
+
                 # Test the clean_text method
                 cleaned = processor._clean_text(html)
                 assert "alert" not in cleaned
@@ -167,34 +170,38 @@ def test_clean_text() -> None:
 
 def test_is_chapter() -> None:
     """Test chapter identification."""
+
     # Create dummy EpubItem objects
     class DummyItem:
         def __init__(self, file_name: str, item_id: str = "dummy_id") -> None:
             self.file_name = file_name
             self.id = item_id
-    
+
     # First, create a proper mock metadata object
     mock_metadata = BookMetadata(
-        title="Test Book",
-        creator="Test Author",
-        language="en",
-        identifier="id123"
+        title="Test Book", creator="Test Author", language="en", identifier="id123"
     )
-    
+
     # Use patching to avoid actual file operations
     with patch("ebooklib.epub.read_epub") as mock_read_epub:
         # Setup mock objects
         mock_epub = Mock()
         mock_read_epub.return_value = mock_epub
-        
+
         # Setup EpubProcessor with method patches to avoid initialization errors
-        with patch.object(EpubProcessor, '_extract_metadata', return_value=mock_metadata):
-            with patch.object(EpubProcessor, '_extract_chapters', return_value=[
-                Chapter(title="Test", content="Test content", order=0, id="test")
-            ]):
+        with patch.object(
+            EpubProcessor, "_extract_metadata", return_value=mock_metadata
+        ):
+            with patch.object(
+                EpubProcessor,
+                "_extract_chapters",
+                return_value=[
+                    Chapter(title="Test", content="Test content", order=0, id="test")
+                ],
+            ):
                 # Now we can initialize the processor safely
                 processor = EpubProcessor("dummy_path")
-                
+
                 # Test the is_chapter method with different types of items
                 assert processor._is_chapter(DummyItem("chapter1.xhtml"))
                 assert not processor._is_chapter(DummyItem("toc.xhtml"))

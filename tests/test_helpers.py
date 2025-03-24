@@ -1,12 +1,13 @@
 """Unit tests for helper functions."""
 
 from pathlib import Path
-from unittest.mock import Mock, patch
+from typing import Any
+from unittest.mock import patch
 
 import pytest
 
-from src.config import ErrorCodes
-from src.helpers import (
+from epub2audio.config import ErrorCodes
+from epub2audio.helpers import (
     ConversionError,
     ConversionWarning,
     check_disk_space,
@@ -25,14 +26,14 @@ def test_conversion_error() -> None:
     assert error.error_code == ErrorCodes.INVALID_EPUB
 
 
-def test_conversion_warning():
+def test_conversion_warning() -> None:
     """Test ConversionWarning class."""
     warning = ConversionWarning("test_type", "Test warning")
     assert warning.type == "test_type"
     assert warning.message == "Test warning"
 
 
-def test_ensure_dir_exists(tmp_path):
+def test_ensure_dir_exists(tmp_path: Path) -> None:
     """Test directory creation."""
     test_dir = tmp_path / "test_dir"
 
@@ -57,13 +58,21 @@ def test_check_disk_space(tmp_path: Path) -> None:
     # Mock disk usage
     with patch("shutil.disk_usage") as mock_disk_usage:
         # Set up the mock to return (total, used, free)
-        mock_disk_usage.return_value = (1024 * 1024 * 200, 1024 * 1024 * 100, 1024 * 1024 * 100)
-        
+        mock_disk_usage.return_value = (
+            1024 * 1024 * 200,
+            1024 * 1024 * 100,
+            1024 * 1024 * 100,
+        )
+
         # Test with sufficient space
         check_disk_space(str(tmp_path), 1024 * 1024 * 50)  # Need 50MB
 
         # Test with insufficient space
-        mock_disk_usage.return_value = (1024 * 1024 * 200, 1024 * 1024 * 150, 1024 * 1024 * 50)
+        mock_disk_usage.return_value = (
+            1024 * 1024 * 200,
+            1024 * 1024 * 150,
+            1024 * 1024 * 50,
+        )
         with pytest.raises(ConversionError) as exc_info:
             check_disk_space(str(tmp_path), 1024 * 1024 * 100)  # Need 100MB
         assert exc_info.value.error_code == ErrorCodes.DISK_SPACE_ERROR
@@ -111,14 +120,14 @@ def test_format_time() -> None:
     assert format_time(12.3456789) == "00:00:12.346"
 
 
-def test_logger(caplog):
+def test_logger(caplog: Any) -> None:
     """Test logger functionality."""
     test_message = "Test log message"
 
     # Configure logger for testing
     logger.remove()
     logger.add(caplog.handler)
-    
+
     # Test info logging
     logger.info(test_message)
     assert test_message in caplog.text

@@ -45,7 +45,7 @@ dependencies = [
 source = "vcs"
 
 [tool.hatch.build.hooks.vcs]
-version-file = "src/_version.py"
+version-file = "epub2audio/_version.py"
 
 [project.optional-dependencies]
 dev = [
@@ -70,11 +70,11 @@ Repository = "https://github.com/clayrosenthal/epub2audio.git"
 Issues = "https://github.com/clayrosenthal/epub2audio/issues"
 
 [project.scripts]
-epub2audio = "src.epub2audio:main"
+epub2audio = "epub2audio.epub2audio:main"
 
 
 [tool.hatch.build.targets.wheel]
-packages = ["src"]
+packages = ["epub2audio"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
@@ -115,7 +115,7 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 
 [tool.ruff.lint.isort]
-known-first-party = ["src"]
+known-first-party = ["epub2audio"]
 combine-as-imports = true
 
 [tool.ruff.lint.pydocstyle]

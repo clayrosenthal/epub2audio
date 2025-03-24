@@ -1,13 +1,13 @@
 """EPUB to Audiobook converter package."""
 
+from ._version import __version__, version
 from .audio_converter import AudioConverter
 from .audio_handler import AudioHandler
 from .config import ErrorCodes, WarningTypes
 from .epub2audio import main, process_epub
 from .epub_processor import BookMetadata, Chapter, EpubProcessor
 from .helpers import ConversionError, ConversionWarning
-from .voices import available_voices, Voice, VoiceInfo
-from ._version import __version__, version
+from .voices import Voice, VoiceInfo, available_voices
 
 __author__ = "Clay Rosenthal"
 __email__ = "epub2audio@mail.clayrosenthal.me"

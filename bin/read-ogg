@@ -23,7 +23,7 @@ from mutagen.oggvorbis import OggVorbis
 from mutagen.flac import Picture
 from PIL import Image
 
-from src.epub_processor import EpubProcessor
+from epub2audio.epub_processor import EpubProcessor
 
 
 @click.command()

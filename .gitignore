@@ -10,12 +10,14 @@ htmlcov/
 books/
 *.pyc
 __pycache__/
-src/_version.py
+epub2audio/_version.py
 .vscode/
 *.epub
-!src/tests/data/sample.epub
+!tests/data/sample.epub
 
 
 packages/
 kokoro-weights
 books
+
+**/CLAUDE.local.md

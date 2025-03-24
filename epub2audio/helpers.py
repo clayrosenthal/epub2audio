@@ -29,7 +29,22 @@ class ConversionWarning:
     details: Optional[dict[str, Any]] = None
 
 
-class ConversionError(Exception):
+class Epub2AudioError(Exception):
+    """Custom exception for Epub2Audio errors."""
+
+    def __init__(self, message: str, error_code: int):
+        """Initialize the Epub2AudioError.
+
+        Args:
+            message: Error message
+            error_code: Error code
+        """
+        self.message = message
+        self.error_code = error_code
+        super().__init__(self.message)
+
+
+class ConversionError(Epub2AudioError):
     """Custom exception for conversion errors."""
 
     def __init__(self, message: str, error_code: int):
@@ -41,10 +56,10 @@ class ConversionError(Exception):
         """
         self.message = message
         self.error_code = error_code
-        super().__init__(self.message)
+        super().__init__(self.message, self.error_code)
 
 
-class AudioHandlerError(Exception):
+class AudioHandlerError(Epub2AudioError):
     """Custom exception for audio handler errors."""
 
     def __init__(self, message: str, error_code: int):
@@ -56,7 +71,7 @@ class AudioHandlerError(Exception):
         """
         self.message = message
         self.error_code = error_code
-        super().__init__(self.message)
+        super().__init__(self.message, self.error_code)
 
 
 class CacheDirManager:
@@ -69,6 +84,7 @@ class CacheDirManager:
 
         Args:
             epub_path: Path to the EPUB file
+            extension: File extension to use for cached files
         """
         with open(epub_path, "rb") as f:
             f_bytes = f.read()

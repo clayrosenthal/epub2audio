@@ -202,6 +202,18 @@ mise run fix     # Auto-fix issues
 7. Push to the branch (`git push origin feature/amazing-feature`)
 8. Open a Pull Request
 
+### TO-DO:
+
+- Add support for epub by link
+- Add support for taking in multiple epubs on the command kine
+- Add a webserver so you could host this 
+- Add support for more audio output formats
+- Add support for images and vector graphics
+  - Either their alt text, or generate it with AI
+- Better integration tests
+- Add support for ONNX runtime
+- Add support for other AI models
+
 ### Development Guidelines
 
 1. Follow Google Python style guide
