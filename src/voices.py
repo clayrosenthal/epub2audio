@@ -286,8 +286,15 @@ class Voice(Enum):
         return voices
 
 
-if Path(KOKORO_PATHS["voice_weights"]).exists():
-    logger.debug("weight path exists")
-    for file in Path(KOKORO_PATHS["voice_weights"]).glob("*.pt"):
-        logger.debug(f"found voice file: {file}")
-        Voice.get_by_name(file.stem).set_path(file)
+def available_voices() -> list[str]:
+    """List available voices."""
+    voices = Voice.list_voices()
+    return [v.name for v in voices]
+
+
+
+# if Path(KOKORO_PATHS["voice_weights"]).exists():
+#     logger.debug("weight path exists")
+#     for file in Path(KOKORO_PATHS["voice_weights"]).glob("*.pt"):
+#         logger.debug(f"found voice file: {file}")
+#         Voice.get_by_name(file.stem).set_path(file)

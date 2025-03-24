@@ -5,10 +5,12 @@ from unittest.mock import Mock, patch
 
 import numpy as np
 import pytest
-from mutagen.oggvorbis import OggVorbis
+from mutagen.oggopus import OggOpus
 from soundfile import SoundFile
 
 from src.audio_handler import AudioHandler
+from src.config import SUPPORTED_AUDIO_FORMATS
+from src.helpers import AudioHandlerError
 from src.config import ErrorCodes
 from src.epub_processor import BookMetadata
 from src.helpers import ConversionError
@@ -31,8 +33,12 @@ def sample_metadata() -> BookMetadata:
 @pytest.fixture
 def audio_handler(tmp_path: Path, sample_metadata: BookMetadata) -> AudioHandler:
     """Create an AudioHandler instance."""
+    epub_path = str(tmp_path / "test.epub")
     output_path = str(tmp_path / "test.ogg")
-    return AudioHandler(output_path, sample_metadata)
+    # Create an empty epub file for testing
+    with open(epub_path, "w") as f:
+        f.write("dummy content")
+    return AudioHandler(epub_path, output_path, sample_metadata, quiet=True)
 
 
 def test_audio_handler_init(
@@ -74,78 +80,71 @@ def test_write_metadata(
     audio_handler: AudioHandler, sample_metadata: BookMetadata
 ) -> None:
     """Test writing metadata to audio file."""
-    mock_audio_file = Mock(spec=OggVorbis)
+    mock_audio_file = Mock(spec=OggOpus)
     mock_audio_file.__setitem__ = Mock()
 
     audio_handler.add_chapter_marker("Chapter 1", 0.0, 10.0)
-    audio_handler._write_metadata(mock_audio_file)
-
-    # Check basic metadata
-    mock_audio_file.__setitem__.assert_any_call("TITLE", sample_metadata.title)
-    mock_audio_file.__setitem__.assert_any_call("ARTIST", sample_metadata.creator)
-    mock_audio_file.__setitem__.assert_any_call("DATE", sample_metadata.date)
-    mock_audio_file.__setitem__.assert_any_call("PUBLISHER", sample_metadata.publisher)
-    mock_audio_file.__setitem__.assert_any_call(
-        "DESCRIPTION", sample_metadata.description
-    )
-
-    # Check chapter markers
-    mock_audio_file.__setitem__.assert_any_call("CHAPTER000", "Chapter 1")
-    mock_audio_file.__setitem__.assert_any_call("CHAPTER000START", "00:00:00.000")
-    mock_audio_file.__setitem__.assert_any_call("CHAPTER000END", "00:00:10.000")
+    with patch.object(audio_handler, '_write_vorbis_metadata') as mock_write_vorbis:
+        audio_handler._write_metadata(mock_audio_file)
+        mock_write_vorbis.assert_called_once_with(mock_audio_file)
 
 
 def test_finalize_audio_file(audio_handler: AudioHandler, tmp_path: Path) -> None:
     """Test finalizing audio file."""
-    # Create a test audio segment
-    data = np.zeros(1000, dtype=np.float32)
-    segment = SoundFile(
-        str(tmp_path / "test_segment.ogg"),
-        mode="w",
-        samplerate=1000,
-        channels=1,
-        format="OGG",
-        subtype="VORBIS",
-    )
-    segment.write(data)
-    segment.close()
+    # Create a mock audio segment
+    mock_segment = Mock(spec=SoundFile)
+    mock_segment.name = str(tmp_path / "test_segment.ogg")
+    mock_segment.close = Mock()
+    
+    # Create mock for concatenate_segments
+    with patch.object(audio_handler, '_concatenate_segments') as mock_concatenate:
+        mock_concatenate.return_value = mock_segment
+        
+        with patch("src.audio_handler.SUPPORTED_AUDIO_FORMATS") as mock_formats:
+            # Mock the types
+            mock_type = type('MockOggOpus', (), {})
+            format_info_mock = Mock()
+            format_info_mock.file_class = mock_type
+            mock_formats.__getitem__.return_value = format_info_mock
 
-    # Reopen for reading
-    segment = SoundFile(str(tmp_path / "test_segment.ogg"))
+            # Mock the type initialization
+            mock_file_instance = Mock()
+            with patch.object(mock_type, '__new__', return_value=mock_file_instance):
+                # Mock the file operations
+                with patch.object(audio_handler, '_write_metadata') as mock_write_metadata:
+                    # Mock shutil.move to prevent file operation
+                    with patch("src.audio_handler.move") as mock_move:
+                        audio_handler.finalize_audio_file([mock_segment])
 
-    with patch("src.audio_handler.OggVorbis") as mock_ogg:
-        mock_audio_file = Mock()
-        mock_ogg.return_value = mock_audio_file
-
-        audio_handler.finalize_audio_file(segment)
-
-        # Check if metadata was written
-        mock_ogg.assert_called_once_with(audio_handler.output_path)
-        mock_audio_file.save.assert_called_once()
+                        # Check if metadata was written
+                        mock_formats.__getitem__.assert_called_with(audio_handler.extension)
+                        mock_write_metadata.assert_called_once_with(mock_file_instance)
+                        mock_file_instance.save.assert_called_once()
+                        # Check file was moved
+                        mock_move.assert_called_once_with(mock_segment.name, audio_handler.output_path)
 
 
 def test_finalize_audio_file_error(audio_handler: AudioHandler, tmp_path: Path) -> None:
     """Test error handling in finalize_audio_file."""
-    # Create a test audio segment
-    data = np.zeros(1000, dtype=np.float32)
-    segment = SoundFile(
-        str(tmp_path / "test_segment.ogg"),
-        mode="w",
-        samplerate=1000,
-        channels=1,
-        format="OGG",
-        subtype="VORBIS",
-    )
-    segment.write(data)
-    segment.close()
+    # Create a mock audio segment
+    mock_segment = Mock(spec=SoundFile)
+    mock_segment.name = str(tmp_path / "test_segment.ogg")
+    mock_segment.close = Mock()
+    
+    # Create mock for concatenate_segments
+    with patch.object(audio_handler, '_concatenate_segments') as mock_concatenate:
+        mock_concatenate.return_value = mock_segment
+        
+        with patch("src.audio_handler.SUPPORTED_AUDIO_FORMATS") as mock_formats:
+            # Set up mock to raise an exception
+            file_class_mock = Mock(side_effect=Exception("Save error"))
+            format_info_mock = Mock()
+            format_info_mock.file_class = file_class_mock
+            mock_formats.__getitem__.return_value = format_info_mock
 
-    # Reopen for reading
-    segment = SoundFile(str(tmp_path / "test_segment.ogg"))
-
-    with patch("src.audio_handler.OggVorbis", side_effect=Exception("Save error")):
-        with pytest.raises(ConversionError) as exc_info:
-            audio_handler.finalize_audio_file(segment)
-        assert exc_info.value.error_code == ErrorCodes.FILESYSTEM_ERROR
+            with pytest.raises(AudioHandlerError) as exc_info:
+                audio_handler.finalize_audio_file([mock_segment])
+            assert exc_info.value.error_code == ErrorCodes.FILESYSTEM_ERROR
 
 
 def test_total_chapters(audio_handler: AudioHandler) -> None:

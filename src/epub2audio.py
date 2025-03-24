@@ -28,7 +28,7 @@ from src.helpers import (
     check_disk_space,
     clean_filename,
     ensure_dir_exists,
-    format_duration,
+    format_time,
     get_duration,
     ROMAN_REGEX,
 )
@@ -49,7 +49,7 @@ class Epub2Audio:
         cache: bool = True,
         convert: bool = True,
         max_chapters: int = -1,
-        format: str = "flac",
+        format: str = "ogg",
     ):
         """Creates an AudioBook from an Epub.
 
@@ -221,8 +221,8 @@ class Epub2Audio:
         self.generation_time = time.time() - self.generation_start_time
 
         # Display summary info
-        display_generation = format_duration(self.generation_time)
-        display_duration = format_duration(self.audio_handler.total_duration)
+        display_generation = format_time(self.generation_time)
+        display_duration = format_time(self.audio_handler.total_duration)
         logger.success(f"\nAudiobook created successfully: {self.output_path}")
         logger.info(f"Total time generating: {display_generation}")
         logger.info(f"Total audio duration: {display_duration}")
@@ -305,9 +305,9 @@ def process_epub(
     "--format",
     "-f",
     type=str,
-    default="flac",
+    default="ogg",
     help="Format to use for the output file.",
-    show_choices=["flac", "ogg", "mp3"],
+    show_choices=["ogg", "flac", "mp3"],
 )
 @click.option("--quiet", "-q", is_flag=True, help="Suppress progress reporting.")
 @click.option("--cache", "-c", is_flag=True, help="Enable caching of audio segments.")

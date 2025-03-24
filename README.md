@@ -28,13 +28,18 @@ A command-line tool and library that converts EPUB ebooks to OGG audiobooks with
 
 ## Installation
 
-1. Clone this repository:
+1. Pip install
+```bash
+pip install epub2audio
+```
+
+2. Clone this repository:
 ```bash
 git clone https://github.com/clayrosenthal/epub2audio.git
 cd epub2audio
 ```
 
-2. Install using mise (recommended):
+3. Install dev setup using mise (recommended):
 ```bash
 mise install
 ```
@@ -96,11 +101,14 @@ epub2audio input.epub \
 ### Command Line Options
 
 - `input.epub`: Path to input EPUB file
-- `--output-dir`, `-o`: Directory for output audiobook files (default: ./audiobooks)
+- `--output`, `-o`: Path of output audiobook file, defaults to title of the ebook.
 - `--voice`, `-v`: Name of the voice to use (default: af_heart)
 - `--speech-rate`, `-r`: Speech rate multiplier (default: 1.0)
 - `--quiet`, `-q`: Suppress progress reporting
 - `--verbose`, `-v`: Output more verbose logs
+- `--cache`, `-c`: Cache generated audio files for reuse
+- `--max-chapters`, `-m`: Max number of chapters to generate, or -1 for unlimited
+- `--format`, `-f`: Output container format
 
 ## Voice Quality Grades
 

@@ -6,6 +6,7 @@ from .config import ErrorCodes, WarningTypes
 from .epub2audio import main, process_epub
 from .epub_processor import BookMetadata, Chapter, EpubProcessor
 from .helpers import ConversionError, ConversionWarning
+from .voices import available_voices, Voice, VoiceInfo
 from ._version import __version__, version
 
 __author__ = "Clay Rosenthal"
@@ -25,4 +26,7 @@ __all__ = [
     "ConversionWarning",
     "__version__",
     "version",
+    "available_voices",
+    "Voice",
+    "VoiceInfo",
 ]

@@ -216,18 +216,17 @@ def format_time(seconds: float) -> str:
     """Format time in seconds to a human-readable string.
 
     Args:
-        seconds: Time in seconds
+        seconds (float): time in seconds
 
     Returns:
-        str: Formatted time string
+            str: Formatted time string with 3 decimal places for milliseconds
     """
     hours = int(seconds // 3600)
     minutes = int((seconds % 3600) // 60)
-    seconds = int(seconds % 60)
+    seconds_part = seconds % 60
 
-    if hours > 0:
-        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-    return f"{minutes:02d}:{seconds:02d}"
+    # Format with 3 decimal places for milliseconds
+    return f"{hours:02d}:{minutes:02d}:{seconds_part:06.3f}"
 
 
 def get_duration(audio: SoundFile) -> float:
@@ -237,30 +236,3 @@ def get_duration(audio: SoundFile) -> float:
         audio: Audio file object
     """
     return float(audio.frames / (audio.samplerate * audio.channels * 1.0))
-
-
-def format_duration(seconds: float) -> str:
-    """Display duration as smallest unit.
-
-    Args:
-        seconds (float): duration in seconds
-
-    Returns:
-            str: Formatted duration string
-    """
-    if seconds < 60:
-        # Format as seconds (00:15.1)
-        return f"00:{seconds:02f}"
-
-    elif seconds < 3600:
-        # Format as minutes:seconds (1:30)
-        minutes = int(seconds // 60)
-        remaining_seconds = seconds % 60
-        return f"{minutes:02d}:{remaining_seconds:02f}"
-
-    else:
-        # Format as hours:minutes:seconds (2:30:00)
-        hours = int(seconds // 3600)
-        minutes = int((seconds % 3600) // 60)
-        remaining_seconds = seconds % 60
-        return f"{hours}:{minutes:02d}:{remaining_seconds:02f}"
