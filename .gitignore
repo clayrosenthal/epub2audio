@@ -9,8 +9,8 @@ dist/
 htmlcov/
 books/
 *.pyc
-__pycache__/
-epub2audio/_version.py
+**/__pycache__/
+**/_version.py
 .vscode/
 *.epub
 !tests/data/sample.epub
