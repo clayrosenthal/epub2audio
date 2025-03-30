@@ -24,11 +24,11 @@ def setup_temp_dir(tmp_path: str) -> Generator[None, None, None]:
 @pytest.fixture
 def test_data_dir() -> Path:
     """Get the test data directory path."""
-    return Path(__file__).parent / "data"
+    return Path(__file__).parent / "test_data"
 
 
 @pytest.fixture(autouse=True)
-def setup_test_data(test_data_dir):
+def setup_test_data(test_data_dir: Path) -> Generator[None, None, None]:
     """Set up test data directory."""
     os.makedirs(test_data_dir, exist_ok=True)
     yield
@@ -36,12 +36,14 @@ def setup_test_data(test_data_dir):
         shutil.rmtree(test_data_dir)
 
 
-def pytest_configure(config):
+def pytest_configure(config: pytest.Config) -> None:
     """Configure pytest."""
     config.addinivalue_line("markers", "integration: mark test as an integration test")
 
 
-def pytest_collection_modifyitems(config, items):
+def pytest_collection_modifyitems(
+    config: pytest.Config, items: list[pytest.Item]
+) -> None:
     """Modify test collection."""
     # Skip integration tests unless explicitly requested
     if not config.getoption("--run-integration"):
@@ -53,7 +55,7 @@ def pytest_collection_modifyitems(config, items):
                 item.add_marker(skip_integration)
 
 
-def pytest_addoption(parser):
+def pytest_addoption(parser: pytest.Parser) -> None:
     """Add custom command line options."""
     parser.addoption(
         "--run-integration",

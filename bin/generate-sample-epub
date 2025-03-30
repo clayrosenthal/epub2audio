@@ -6,12 +6,12 @@
 # ///
 #MISE alias="generate-sample-epub"
 #MISE description="Generate sample EPUB files"
-#MISE sources=["generate-sample-epub", "tests/data/cover.jpg"]
-#MISE outputs=["tests/data/sample.epub", "tests/data/sample-single-page.epub"]
+
+
+ #  MISE sources=["generate-sample-epub", "bin/cover.jpg"]
 """Generate sample EPUB files for testing."""
 
 import os
-from typing import NoReturn
 
 from ebooklib import epub
 
@@ -21,7 +21,7 @@ def create_multi_page_epub(output_path: str) -> None:
     book = epub.EpubBook()
 
     # Add cover
-    with open("tests/data/cover.jpg", "rb") as f:
+    with open("bin/cover.jpg", "rb") as f:
         book.set_cover("cover.jpg", f.read())
 
     # Set metadata
@@ -75,7 +75,7 @@ def create_single_page_epub(output_path: str) -> None:
     book = epub.EpubBook()
 
     # Add cover
-    with open("tests/data/cover.jpg", "rb") as f:
+    with open("bin/cover.jpg", "rb") as f:
         book.set_cover("cover.jpg", f.read())
 
     # Set metadata
@@ -100,11 +100,11 @@ def create_single_page_epub(output_path: str) -> None:
             <p class="Author">By Test Author</p>
         </div>
         <div>
-            <p class="Heading-2">Chapter 1: The First One</p>
+            <p class="Heading-2" id="chap1">Chapter 1: The First One</p>
             <p class="Paragraph---First">This is the first chapter of the sample book.</p>
             <p class="Paragraph---Indent">It contains multiple paragraphs to test text extraction.</p>
             
-            <p class="Heading-2">Chapter 2: The Other One</p>
+            <p class="Heading-2" id="chap2">Chapter 2: The Other One</p>
             <p class="Paragraph---First">This is the second chapter of the sample book.</p>
             <p class="Paragraph---Indent">It includes some formatting like <b>bold</b> and <i>italic</i> text.</p>
             <img src="image.jpg" alt="The alt text of the test image" title="The test image"/>
@@ -116,8 +116,12 @@ def create_single_page_epub(output_path: str) -> None:
     # Add the single page to book
     book.add_item(single_page)
 
-    # Create table of contents
-    book.toc = (single_page,)
+    # Create links for each chapter
+    chap1 = epub.Link("content.xhtml#chap1", "Chapter 1: The First One", "chap1")
+    chap2 = epub.Link("content.xhtml#chap2", "Chapter 2: The Other One", "chap2")
+
+    # Create proper table of contents with links to chapters
+    book.toc = (chap1, chap2)
 
     # Add navigation files
     book.add_item(epub.EpubNcx())

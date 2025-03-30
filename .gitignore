@@ -14,7 +14,7 @@ books/
 .vscode/
 *.epub
 !tests/data/sample.epub
-!tests/data/cover.jpg
+!tests/data/sample-single-page.epub
 
 packages/
 kokoro-weights

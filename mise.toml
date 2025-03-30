@@ -49,17 +49,17 @@ sources = ["bin/generate-sample-epub"]
 
 [tasks.sample-flac]
 description = "Create a sample FLAC audiobook"
-run = "uv run epub2audio '{{ config_root }}/tests/data/sample.epub' --output '{{ config_root }}/audiobooks/Sample_Book.flac'"
+run = "uv run epub2audio '{{ config_root }}/tests/data/sample.epub' --output '{{ config_root }}/audiobooks/'"
 depends = ["gen-sample"]
 
 [tasks.sample-mp3]
 description = "Create a sample MP3 audiobook"
-run = "uv run epub2audio '{{ config_root }}/tests/data/sample.epub' --output '{{ config_root }}/audiobooks/Sample_Book.mp3'"
+run = "uv run epub2audio '{{ config_root }}/tests/data/sample.epub' --output '{{ config_root }}/audiobooks/'"
 depends = ["gen-sample"]
 
 [tasks.sample-ogg]
 description = "Create a sample OGG audiobook"
-run = "uv run epub2audio '{{ config_root }}/tests/data/sample.epub' --output '{{ config_root }}/audiobooks/Sample_Book.ogg'"
+run = "uv run epub2audio '{{ config_root }}/tests/data/sample.epub' --output '{{ config_root }}/audiobooks/'"
 depends = ["gen-sample"]
 
 [tasks.sample-all]

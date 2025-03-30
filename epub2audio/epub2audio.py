@@ -70,7 +70,11 @@ class Epub2Audio:
         self.speech_rate = speech_rate
         self.max_chapters = max_chapters
         self.extension = f".{format}"
-        if output_path and Path(output_path).suffix != self.extension:
+        if (
+            output_path
+            and not Path(output_path).is_dir()
+            and Path(output_path).suffix != self.extension
+        ):
             raise ValueError(f"Output path must have the extension {self.extension}")
         self._parse_epub()
         # Create output filename
@@ -80,6 +84,9 @@ class Epub2Audio:
             )
         elif not output_path:
             self.output_path = Path(epub_path).with_suffix(self.extension)
+        elif Path(output_path).is_dir():
+            audiobook_name = clean_filename(f"{self.metadata.title}{self.extension}")
+            self.output_path = Path(output_path) / audiobook_name
         elif Path(output_path).suffix != self.extension:
             self.output_path = Path(output_path).with_suffix(self.extension)
         else:

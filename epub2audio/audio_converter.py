@@ -30,7 +30,7 @@ class AudioConverter:
     def __init__(
         self,
         epub_path: StrPath,
-        voice: str | Voice = Voice.AF_HEART,
+        voice: Union[str, Voice] = Voice.AF_HEART,
         speech_rate: float = 1.0,
         cache: bool = True,
         extension: str = ".flac",
@@ -63,7 +63,9 @@ class AudioConverter:
                 model=model,
             )
             self.speech_rate = speech_rate
-            self.cache_dir_manager = CacheDirManager(epub_path, extension=extension)
+            self.cache_dir_manager = CacheDirManager(
+                epub_path, extension=extension, voice=self.voice.name
+            )
             self.cache = cache
             self.extension = extension
             self.format, self.subtype, _ = SUPPORTED_AUDIO_FORMATS[extension]

@@ -25,30 +25,32 @@ from epub2audio.epub_processor import EpubProcessor
 
 @click.command()
 @click.argument("path", type=click.Path(exists=True), default="tests/data/sample.epub")
-def read_epub(path: Path) -> epub.EpubBook:
+@click.option("--output", type=click.Path(), default="tests/data/output.txt")
+@click.option("--debug", is_flag=True)
+def read_epub(path: Path, output: Path, debug: bool) -> epub.EpubBook:
     """Read a EPUB file carefully.
 
     Meant to be used for debugging.
 
     Args:
         path: Path to the EPUB file
+        output: Path to the output file
+        debug: Whether to run in debug mode
 
     Returns:
         epub.EpubBook: The EPUB book
     """
     logger.remove()
-    logger.add(sys.stderr, level="TRACE")
+    if debug:
+        logger.add(sys.stderr, level="TRACE")
+    else:
+        logger.add(sys.stderr, level="INFO")
     # from pdb import set_trace; set_trace()
     epub_processor = EpubProcessor(path)
 
-    print(epub_processor.book)
-    # for chapter in epub_processor.book.chapters:
-    #     print(chapter)
-    # Read a new EPUB book
-    # book = epub.read_epub(path)
+    with open(output, "w") as f:
+        f.write(str(epub_processor.book))
 
-    # print(book.get_items_of_type(ebooklib.ITEM_DOCUMENT))
-    # from code import interact; interact(local=locals())
 
 if __name__ == "__main__":
     read_epub()
