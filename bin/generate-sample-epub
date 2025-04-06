@@ -5,68 +5,134 @@
 # ]
 # ///
 #MISE alias="generate-sample-epub"
-#MISE description="Generate a sample EPUB file"
+#MISE description="Generate sample EPUB files"
 #MISE sources=["generate-sample-epub", "tests/data/cover.jpg"]
-#MISE outputs=["tests/data/sample.epub"]
-"""Generate a sample EPUB file for testing."""
+#MISE outputs=["tests/data/sample.epub", "tests/data/sample-single-page.epub"]
+"""Generate sample EPUB files for testing."""
 
 import os
+from typing import NoReturn
 
 from ebooklib import epub
 
-# Create a new EPUB book
-book = epub.EpubBook()
+def create_multi_page_epub(output_path: str) -> None:
+    """Create an EPUB with separate chapters."""
+    # Create a new EPUB book
+    book = epub.EpubBook()
 
-# Add cover
-with open("tests/data/cover.jpg", "rb") as f:
-    book.set_cover("cover.jpg", f.read())
+    # Add cover
+    with open("tests/data/cover.jpg", "rb") as f:
+        book.set_cover("cover.jpg", f.read())
 
-# Set metadata
-book.set_identifier("id123")
-book.set_title("Sample Book")
-book.set_language("en")
-book.add_author("Test Author")
-book.add_metadata("DC", "date", "2025")
-book.add_metadata("DC", "publisher", "Test Publisher")
-book.add_metadata("DC", "description", "A sample book for testing")
+    # Set metadata
+    book.set_identifier("id123")
+    book.set_title("Sample Multi-Page Book")
+    book.set_language("en")
+    book.add_author("Test Author")
+    book.add_metadata("DC", "date", "2025")
+    book.add_metadata("DC", "publisher", "Test Publisher")
+    book.add_metadata("DC", "description", "A sample book for testing")
 
-# Create chapters
-c1 = epub.EpubHtml(title="Chapter 1", file_name="chap_1.xhtml", lang="en")
-c1.content = """
-    <h1>Chapter 1: The First One</h1>
-    <p>This is the first chapter of the sample book.</p>
-    <p>It contains multiple paragraphs to test text extraction.</p>
-"""
+    # Create chapters
+    c1 = epub.EpubHtml(title="Chapter 1", file_name="chap_1.xhtml", lang="en")
+    c1.content = """
+        <h1>Chapter 1: The First One</h1>
+        <p>This is the first chapter of the sample book.</p>
+        <p>It contains multiple paragraphs to test text extraction.</p>
+    """
 
-c2 = epub.EpubHtml(title="Chapter 2", file_name="chap_2.xhtml", lang="en")
-c2.content = """
-    <h1>Chapter 2: The Other One</h1>
-    <p>This is the second chapter of the sample book.</p>
-    <p>It includes some formatting like <b>bold</b> and <i>italic</i> text.</p>
-    <img src="image.jpg" alt="The alt text of the test image" title="The test image"/>
-"""
+    c2 = epub.EpubHtml(title="Chapter 2", file_name="chap_2.xhtml", lang="en")
+    c2.content = """
+        <h1>Chapter 2: The Other One</h1>
+        <p>This is the second chapter of the sample book.</p>
+        <p>It includes some formatting like <b>bold</b> and <i>italic</i> text.</p>
+        <img src="image.jpg" alt="The alt text of the test image" title="The test image"/>
+    """
 
-# Add chapters to book
-book.add_item(c1)
-book.add_item(c2)
+    # Add chapters to book
+    book.add_item(c1)
+    book.add_item(c2)
 
-# Create table of contents
-book.toc = (
-    c1,
-    c2,
-)
+    # Create table of contents
+    book.toc = (
+        c1,
+        c2,
+    )
 
-# Add navigation files
-book.add_item(epub.EpubNcx())
-book.add_item(epub.EpubNav())
+    # Add navigation files
+    book.add_item(epub.EpubNcx())
+    book.add_item(epub.EpubNav())
 
-# Create spine
-book.spine = ["cover", "nav", c1, c2]
+    # Create spine
+    book.spine = ["cover", "nav", c1, c2]
 
-# from code import interact;s interact(local=locals())
+    # Write the EPUB file
+    epub.write_epub(output_path, book)
 
+def create_single_page_epub(output_path: str) -> None:
+    """Create an EPUB with all content in a single page."""
+    # Create a new EPUB book
+    book = epub.EpubBook()
+
+    # Add cover
+    with open("tests/data/cover.jpg", "rb") as f:
+        book.set_cover("cover.jpg", f.read())
+
+    # Set metadata
+    book.set_identifier("id456")
+    book.set_title("Sample Single-Page Book")
+    book.set_language("en")
+    book.add_author("Test Author")
+    book.add_metadata("DC", "date", "2025")
+    book.add_metadata("DC", "publisher", "Test Publisher")
+    book.add_metadata("DC", "description", "A sample book with all content in a single page")
+
+    # Create a single page with all content
+    single_page = epub.EpubHtml(title="Sample Single-Page Book", file_name="content.xhtml", lang="en")
+    single_page.content = """
+    <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+    <head></head>
+    <body>
+        <div class="Basic-Text-Frame">
+            <p class="Title">Sample Single-Page Book</p>
+        </div>
+        <div class="Basic-Text-Frame">
+            <p class="Author">By Test Author</p>
+        </div>
+        <div>
+            <p class="Heading-2">Chapter 1: The First One</p>
+            <p class="Paragraph---First">This is the first chapter of the sample book.</p>
+            <p class="Paragraph---Indent">It contains multiple paragraphs to test text extraction.</p>
+            
+            <p class="Heading-2">Chapter 2: The Other One</p>
+            <p class="Paragraph---First">This is the second chapter of the sample book.</p>
+            <p class="Paragraph---Indent">It includes some formatting like <b>bold</b> and <i>italic</i> text.</p>
+            <img src="image.jpg" alt="The alt text of the test image" title="The test image"/>
+        </div>
+    </body>
+    </html>
+    """
+
+    # Add the single page to book
+    book.add_item(single_page)
+
+    # Create table of contents
+    book.toc = (single_page,)
+
+    # Add navigation files
+    book.add_item(epub.EpubNcx())
+    book.add_item(epub.EpubNav())
+
+    # Create spine
+    book.spine = ["cover", "nav", single_page]
+
+    # Write the EPUB file
+    epub.write_epub(output_path, book)
+
+# Ensure output directory exists
 if not os.path.exists("tests/data"):
     os.makedirs("tests/data")
 
-# Write the EPUB file
-epub.write_epub("tests/data/sample.epub", book)
+# Generate both EPUB formats
+create_multi_page_epub("tests/data/sample.epub")
+create_single_page_epub("tests/data/sample-single-page.epub")
